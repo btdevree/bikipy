@@ -1,4 +1,4 @@
-# BiKiPy - <u>Bi</u>nding <u>Ki</u>netics in <u>Py</u>thon
+# BiKiPy - *Bi*nding *Ki*netics in *Py*thon
 ---
 
 Readme file

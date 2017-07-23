@@ -1,4 +1,7 @@
-#!/usr/bin/python
+"""Classes representing physical or conceptual objects needed to describe the
+biochemical system, the model, and the experiments performed. 
+
+"""
 
 from traits.api import HasTraits, Str, ListStr
 
