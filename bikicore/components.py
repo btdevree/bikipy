@@ -21,3 +21,12 @@ class Protein(HasTraits):
     symbol = Str('R')
     conformation_names = ListStr(['inactive', 'active']) 
     conformation_symbols = ListStr (['', '*'])
+    
+    # Check if the trait values are valid. Use after user editing of the object, for example.
+    def check_protein_traits(self):
+        
+        # Check if the number of conformation names and symbols are the same
+        if ((type(value) is types.IntType) and
+            (value > 0) and ((value % 2) == 1)):
+            return value
+        self.error(object, name, value)

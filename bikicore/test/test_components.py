@@ -27,7 +27,7 @@ def test_Drug_has_name(default_Drug_instance):
 def test_Drug_has_symbol(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'symbol')
     
-# -- Tests for Protein objects--
+# --Tests for Protein objects--
 
 # Test if Protein objects have the required properties
 def test_Protein_has_name(default_Protein_instance):
