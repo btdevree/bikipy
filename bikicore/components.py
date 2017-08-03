@@ -28,5 +28,5 @@ class Protein(HasTraits):
         
         # Check if the number of conformation names and symbols are the same
         if len(self.conformation_names) != len(self.conformation_symbols):
-            except ComponentNotValidError('The number of protein conformation names and symbols must be the same'):
+            raise ComponentNotValidError('The number of protein conformation names and symbols must be the same')
     
