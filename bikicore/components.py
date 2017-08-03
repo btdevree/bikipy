@@ -4,6 +4,7 @@ biochemical system, the model, and the experiments performed.
 """
 
 from traits.api import HasTraits, Str, ListStr
+from bikipy.bikicore.exceptions import ComponentNotValidError
 
 # ------ Classes ------
 # Define classes for the different components of the biochemical system
@@ -26,7 +27,6 @@ class Protein(HasTraits):
     def check_protein_traits(self):
         
         # Check if the number of conformation names and symbols are the same
-        if ((type(value) is types.IntType) and
-            (value > 0) and ((value % 2) == 1)):
-            return value
-        self.error(object, name, value)
+        if len(self.conformation_names) != len(self.conformation_symbols):
+            except ComponentNotValidError('The number of protein conformation names and symbols must be the same'):
+    
