@@ -2,10 +2,12 @@
 
 # Base custom exception
 class BikipyException(Exception):
-    pass   
+    pass # No special activity needed yet  
 
 class ComponentNotValidError(BikipyException):
-
-    def __init__(self, message = ''):
-        self.message = message
+    """Exception for when a component object is not in a valid configuration."""
     
+    # Hand message to the base exception module
+    def __init__(self, message = ''):
+        super().__init__(message)
+
