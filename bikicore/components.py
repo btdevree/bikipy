@@ -28,7 +28,7 @@ class Protein(HasTraits):
         if len(self.conformation_names) != len(self.conformation_symbols):
             raise ComponentNotValidError('The number of protein conformation names and symbols must be the same')
 
-# Define classes for the different types of states
+# Define class for the different states - nodes on network graph
 class State(HasTraits):
     
     # Traits initialization
@@ -36,26 +36,28 @@ class State(HasTraits):
     number = Int(1)
     IDnumber = Int(1)
 
-# Define classes for the different types of state transitions
-class ConformationalChange(HasTraits):
+# Define classes for the different types of state transitions - edges on network graph
+class StateTransition(HasTraits):    
+    #Superclass for all transition objects
+    
+    # Traits initialization
+    number = Int(1)
+    IDnumber = Int(1)
+    
+class ConformationalChange(StateTransition):
     
     # Traits initialization
     name = Str('activation')
-    number = Int(1)
-    IDnumber = Int(1)
     
-class Association(HasTraits):
+class Association(StateTransition):
     
     # Traits initialization
     name = Str('association')
-    number = Int(1)
-    IDnumber = Int(1)
     
-class Dissociation(HasTraits):
+class Dissociation(StateTransition):
     
     # Traits initialization
-    name = Str('Dissociation')
-    number = Int(1)
-    IDnumber = Int(1)
+    name = Str('dissociation')
+    
     
     

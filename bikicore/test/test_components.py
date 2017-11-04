@@ -10,23 +10,33 @@ from bikipy.bikicore.exceptions import ComponentNotValidError
 # Create a default Drug object for reuse in tests
 @pytest.fixture()
 def default_Drug_instance():
-    return bkcc.Drug();
+    return bkcc.Drug()
     
 # Create a default Drug object for reuse in tests
 @pytest.fixture()
 def default_Protein_instance():
-    return bkcc.Protein();
+    return bkcc.Protein()
 
 # Create a default State object for reuse in tests
 @pytest.fixture()
 def default_State_instance():
-    return bkcc.State();
+    return bkcc.State()
 
 # Create a default ConformationalChange object for reuse in tests
 @pytest.fixture()
 def default_ConfChange_instance():
-    return bkcc.ConformationalChange();
+    return bkcc.ConformationalChange()
+    
+# Create a default Association object for reuse in tests
+@pytest.fixture()
+def default_Association_instance():
+    return bkcc.Association()
 
+# Create a default Dissociation object for reuse in tests
+@pytest.fixture()
+def default_Dissociation_instance():
+    return bkcc.Dissociation()
+    
 # ---- Unit tests ----
 
 # --Tests for Drug objects--
@@ -94,7 +104,15 @@ def test_Association_has_name(default_Association_instance):
 def test_Association_has_number(default_Association_instance):
     assert hasattr(default_Association_instance, 'number')
 
-def test_Association_has_IDnumber(default_ConfChange_instance):
-    assert hasattr(default_ConfChange_instance, 'IDnumber')
+def test_Association_has_IDnumber(default_Association_instance):
+    assert hasattr(default_Association_instance, 'IDnumber')
     
-        
+#Test if Dissociation objects have the required properties
+def test_Dissociation_has_name(default_Dissociation_instance):
+    assert hasattr(default_Dissociation_instance, 'name')
+    
+def test_Dissociation_has_number(default_Dissociation_instance):
+    assert hasattr(default_Dissociation_instance, 'number')
+
+def test_Dissociation_has_IDnumber(default_Dissociation_instance):
+    assert hasattr(default_Dissociation_instance, 'IDnumber')       
