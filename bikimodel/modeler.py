@@ -7,6 +7,8 @@ from traitsui.api import View, Menu, MenuBar, Action, Handler, NoButtons
 from traitsui.item import Item
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
+from bikipy.bikicore.model import create_new_model
+
 
 class ModelCreator(HasTraits):
     """Base GUI object that contains the components needed to build up or edit a 
@@ -16,16 +18,12 @@ class ModelCreator(HasTraits):
     #Initialize traits
     current_model = Instance(bkcm.Model)
     model_list = List(Instance(bkcm.Model))    
-        
+            
     #Menu Bar methods
     def new_model(self):
-        print(self.current_model)
-        print(bkcm.create_new_model(10))
-        new_model = bkcm.create_new_model(3)
+        new_model = create_new_model(3)
         self.current_model = new_model
-        print(new_model)
-        print(self.current_model)
-        self.model_list = self.model_list.append(self.current_model)
+        self.model_list.extend([self.current_model])
     
     new_menu_action = Action(
         name='New Model',

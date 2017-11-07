@@ -15,5 +15,4 @@ class Model(HasTraits):
 #Method to create a new model from scratch
 def create_new_model(IDnum):
     new_model = Model(IDnum)
-    print(new_model)
     return new_model
