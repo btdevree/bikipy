@@ -18,7 +18,8 @@ class ModelCreator(HasTraits):
     #Initialize traits
     current_model = Instance(bkcm.Model)
     model_list = List(Instance(bkcm.Model))    
-            
+    
+                    
     #Menu Bar methods
     def new_model(self):
         new_model = create_new_model(3)
@@ -43,14 +44,12 @@ class ModelCreator(HasTraits):
         
         return(view_config)
         
-
+    #Setup GUI window options
     traits_view = config_model_view
-    
-    
-
-# Create the ModelCreator object:
-mc = ModelCreator()
 
 # Start up ModelCreator object if script is called by python intrepreter
 if __name__ == "__main__":
+          
+    # Create the ModelCreator object and start the traits GUI
+    mc = ModelCreator()    
     mc.configure_traits()

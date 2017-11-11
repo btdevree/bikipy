@@ -3,7 +3,8 @@ biochemical system, the model, and the experiments performed.
 
 """
 
-from traits.api import HasTraits, Str, ListStr, Int
+import uuid
+from traits.api import HasTraits, Str, List, Int, Instance
 from bikipy.bikicore.exceptions import ComponentNotValidError
 
 # Define classes for the different components of the biochemical system
@@ -12,14 +13,16 @@ class Drug(HasTraits):
     # Traits initialization
     name = Str('adrenaline')
     symbol = Str('A')
+    ID = Instance(uuid.UUID) 
     
 class Protein(HasTraits):
     
     # Traits initialization
     name = Str('beta adrenergic receptor')
     symbol = Str('R')
-    conformation_names = ListStr(['inactive', 'active']) 
-    conformation_symbols = ListStr (['', '*'])
+    conformation_names = List(Str(['inactive', 'active'])) 
+    conformation_symbols = List(Str (['', '*']))
+    ID = Instance(uuid.UUID) 
     
     # Check if the trait values are valid. Use after user editing of the object, for example.
     def check_protein_traits(self):
@@ -34,7 +37,7 @@ class State(HasTraits):
     # Traits initialization
     name = Str('1')
     number = Int(1)
-    IDnumber = Int(1)
+    ID = Instance(uuid.UUID)
 
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    
@@ -42,7 +45,9 @@ class StateTransition(HasTraits):
     
     # Traits initialization
     number = Int(1)
-    IDnumber = Int(1)
+    ID = Instance(uuid.UUID)
+    
+    
     
 class ConformationalChange(StateTransition):
     
