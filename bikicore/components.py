@@ -47,8 +47,6 @@ class StateTransition(HasTraits):
     number = Int(1)
     ID = Instance(uuid.UUID)
     
-    
-    
 class ConformationalChange(StateTransition):
     
     # Traits initialization

@@ -24,7 +24,7 @@ class Model(HasTraits):
         #Code to duplicate the structure of a model with new objects
         pass           
           
-#Model creation methods
+#Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
     
@@ -39,21 +39,10 @@ def create_new_model(new_model_type, model_list, model_to_copy = None):
         elif new_model_type == 'copy_child':
             new_model = Model(new_number, new_name, model_to_copy.parent_model)
         new_model._copy_from(model_to_copy)
-       
-
-    return new_model
-    
-#Make a brand new model from scratch, no parent
-def create_new_child_model(model_list, parent_model):
-    parent_name = parent_model.name
-    new_name = [parent_name, '-copy']
-    new_number = _find_next_model_number(model_list)
-    new_model = Model(1, 'New Model', parent_model)
     return new_model
     
 def _find_next_model_number(model_list):
-    found_numbers = set()
-    found_numbers.add([model.number for model in model_list])
+    found_numbers = {model.number for model in model_list}
     current_int = 1
     while ({current_int} & found_numbers) != set():
        current_int += 1

@@ -7,7 +7,6 @@ from traitsui.api import View, Menu, MenuBar, Action, Handler, NoButtons
 from traitsui.item import Item
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
-from bikipy.bikicore.model import create_new_model
 
 
 class ModelCreator(HasTraits):
@@ -22,9 +21,19 @@ class ModelCreator(HasTraits):
                     
     #Menu Bar methods
     def new_model(self):
-        new_model = create_new_model(3)
+        new_model = bkcm.create_new_model('new', self.model_list)
+        self.model_list.extend([self.new_model])
+        self.select_model(new_model)
+    
+    def copy_model(self):
+        parent_model = UserSelectModel(self.model_list)
+        new_model = bkcm.create_new_model('copy', self.model_list)
+        self.model_list.extend([self.new_model])
+        self.select_model(new_model)
+    
+    def select_model(self):
         self.current_model = new_model
-        self.model_list.extend([self.current_model])
+
     
     new_menu_action = Action(
         name='New Model',
