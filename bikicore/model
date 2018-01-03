@@ -1,5 +1,0 @@
-"""Class for the model objects used throughout the program.
-"""
-
-class Model():
-    pass

@@ -22,28 +22,29 @@ class ModelCreator(HasTraits):
     #Menu Bar methods
     def new_model(self):
         new_model = bkcm.create_new_model('new', self.model_list)
-        self.model_list.extend([self.new_model])
+        self.model_list.append(new_model)
         self.select_model(new_model)
     
     def copy_model(self):
         parent_model = UserSelectModel(self.model_list)
-        new_model = bkcm.create_new_model('copy', self.model_list)
-        self.model_list.extend([self.new_model])
+        new_model = bkcm.create_new_model('copy', self.model_list, parent_model)
+        self.model_list.append(new_model)
         self.select_model(new_model)
     
-    def select_model(self):
-        self.current_model = new_model
-
-    
-    new_menu_action = Action(
-        name='New Model',
-        action='new_model',
-        tooltip='Create a new model')      
-    
+    def select_model(self, selected_model):
+        selected_model = UserSelectModel(self.model_list)
+        self.current_model = selected_model
+   
     # Method to configure the view
     def config_model_view(self):
         menubar_config = MenuBar(
-                            Menu(self.new_menu_action, name = 'New Model'))
+                            Menu(Action(name='New Model',
+                                        action='new_model',
+                                        tooltip='Create a new model from scratch'), 
+                                 Action(name='Copy Model',
+                                        action='copy_model',
+                                        tooltip='Create a new model by copying an existing one'),
+                                            name = 'Create Model'))
         
         view_config = View(
             Item(label="Lots of stuff should go here"),

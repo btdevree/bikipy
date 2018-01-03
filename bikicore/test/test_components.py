@@ -83,7 +83,7 @@ def test_State_has_number(default_State_instance):
     assert hasattr(default_State_instance, 'number')
 
 def test_State_has_IDnumber(default_State_instance):
-    assert hasattr(default_State_instance, 'IDnumber')
+    assert hasattr(default_State_instance, 'ID')
 
 # --Tests for ConformationalChange objects--
 
@@ -95,7 +95,7 @@ def test_ConfChange_has_number(default_ConfChange_instance):
     assert hasattr(default_ConfChange_instance, 'number')
 
 def test_ConfChange_has_IDnumber(default_ConfChange_instance):
-    assert hasattr(default_ConfChange_instance, 'IDnumber')
+    assert hasattr(default_ConfChange_instance, 'ID')
     
 #Test if Association objects have the required properties
 def test_Association_has_name(default_Association_instance):
@@ -105,7 +105,7 @@ def test_Association_has_number(default_Association_instance):
     assert hasattr(default_Association_instance, 'number')
 
 def test_Association_has_IDnumber(default_Association_instance):
-    assert hasattr(default_Association_instance, 'IDnumber')
+    assert hasattr(default_Association_instance, 'ID')
     
 #Test if Dissociation objects have the required properties
 def test_Dissociation_has_name(default_Dissociation_instance):
@@ -115,4 +115,4 @@ def test_Dissociation_has_number(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'number')
 
 def test_Dissociation_has_IDnumber(default_Dissociation_instance):
-    assert hasattr(default_Dissociation_instance, 'IDnumber')       
+    assert hasattr(default_Dissociation_instance, 'ID')       

@@ -8,6 +8,9 @@ from setuptools import setup
 #import sys,os.path
 #sys.path.append(os.path.expanduser('~/Desktop'))
 
+#To add desktop to bash phython path, add to end of .bashrc file
+#PYTHONPATH="${PYTHONPATH}:/home/zcx554/Desktop"
+#export PYTHONPATH
 
 
 
