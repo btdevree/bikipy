@@ -3,7 +3,7 @@
 """
 
 from traits.api import HasTraits, Instance, List
-from traitsui.api import View, Menu, MenuBar, Action, Handler, NoButtons
+from traitsui.api import View, Menu, MenuBar, Action, Handler, NoButtons, Group
 from traitsui.item import Item
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
@@ -23,13 +23,13 @@ class ModelCreator(HasTraits):
     def new_model(self):
         new_model = bkcm.create_new_model('new', self.model_list)
         self.model_list.append(new_model)
-        self.select_model(new_model)
+        self.current_model = new_model
     
     def copy_model(self):
         parent_model = UserSelectModel(self.model_list)
         new_model = bkcm.create_new_model('copy', self.model_list, parent_model)
         self.model_list.append(new_model)
-        self.select_model(new_model)
+        self.current_model = new_model
     
     def select_model(self, selected_model):
         selected_model = UserSelectModel(self.model_list)
@@ -47,9 +47,13 @@ class ModelCreator(HasTraits):
                                             name = 'Create Model'))
         
         view_config = View(
+            Group(
+                Item(name = 'model_list', style = 'custom'),
+                show_border = True),
             Item(label="Lots of stuff should go here"),
             menubar = menubar_config,
-            buttons=NoButtons
+            buttons=NoButtons,
+            title = 'BiKiPy Modeler'
             )
         
         return(view_config)
