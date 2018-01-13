@@ -23,17 +23,29 @@ def default_Model_list():
 # --Tests for Model objects--
 
 # Test if Model object has the required properties
-def test_Drug_has_number(default_Model_instance):
+def test_Model_has_number(default_Model_instance):
     assert hasattr(default_Model_instance, 'number')
     
-def test_Drug_has_name(default_Model_instance):
+def test_Model_has_name(default_Model_instance):
     assert hasattr(default_Model_instance, 'name')
 
-def test_Drug_has_parent(default_Model_instance):
+def test_Model_has_parent(default_Model_instance):
     assert hasattr(default_Model_instance, 'parent_model')
 
-def test_Drug_has_ID(default_Model_instance):
+def test_Model_has_ID(default_Model_instance):
     assert hasattr(default_Model_instance, 'ID')
+
+def test_Model_has_drug_list(default_Model_instance):
+    assert hasattr(default_Model_instance, 'drug_list')
+    
+def test_Model_has_protein_list(default_Model_instance):
+    assert hasattr(default_Model_instance, 'protein_list')
+
+def test_Model_has_rule_list(default_Model_instance):
+    assert hasattr(default_Model_instance, 'rule_list')
+
+def test_Model_has_compartment_list(default_Model_instance):
+    assert not hasattr(default_Model_instance, 'compartment_list')
     
 # Test for creation methods
 def test_create_new(default_Model_list):

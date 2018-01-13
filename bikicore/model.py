@@ -2,7 +2,8 @@
 """
 
 import uuid
-from traits.api import HasTraits, Int, Str, Instance, This
+import bikipy.bikicore.components as bkcc
+from traits.api import HasTraits, Int, Str, Instance, This, List
 
 #Model class
 class Model(HasTraits):
@@ -12,6 +13,10 @@ class Model(HasTraits):
     name = Str
     parent_model = Instance(This)
     ID = Instance(uuid.UUID)
+    drug_list = List(bkcc.Drug)
+    protein_list = List(bkcc.Protein)
+    #compartment_list = List(bkcc.Compartment) #To be implemented in future
+    rule_list = List(bkcc.Rule)
     
     def __init__(self, number, name, parent_model, *args, **kwargs):
         super().__init__(*args, **kwargs) #Make sure to call the HasTraits initialization machinery
