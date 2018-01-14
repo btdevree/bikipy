@@ -5,7 +5,7 @@ biochemical system, the model, and the experiments performed.
 
 import uuid
 from traits.api import HasTraits, Str, List, Int, Instance, Enum
-from bikipy.bikicore.exceptions import ComponentNotValidError
+from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 # Define classes for the different components of the biochemical system
 class Drug(HasTraits):
@@ -76,7 +76,7 @@ class Rule(HasTraits):
     # Note: rule_subject and rule_object defined dynamically in __init__ as Enum(all listed Drug and Protein objects in the Model)
     
     # Possible rules
-    rule_choices = [' associates with ',
+    _rule_choices = [' associates with ',
                     ' dissociates from ',
                     ' reversibly associates with ',
                     ' associates and dissociates in rapid equlibrium with ',
@@ -87,22 +87,21 @@ class Rule(HasTraits):
                     ' can only be in complex along with ']
                    #' is constrained to be the same value as ',
                    #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
-    rule = Enum(*rule_choices)
+    rule = Enum(*_rule_choices)
     
     # Create a list of possible component choices before completeing Traits initalization
     def __init__(self, model, *args, **kwargs):
-        self.components = [*model.drug_list, *model.protein_list]
-        self.add_trait('rule_subject', Enum(*self.components))
-        self.add_trait('rule_object', Enum(*self.components)) 
+        self._components = [*model.drug_list, *model.protein_list]
+        self.add_trait('rule_subject', Enum(*self._components))
+        self.add_trait('rule_object', Enum(*self._components)) 
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
     
+    # Method to check if the rule is valid
+    def check_rule_traits(self):
         
+        # Drugs do not have conformations
+        if isinstance(self.rule_subject, Drug):
+            if self.subject_conf != None and not (self.subject_conf == 'select' and self.subject_conf_list == []):
+                raise RuleNotValidError('Drugs cannot have conformations')
+            
         
-    
-    
-    
-        
-    
-
-    
-    

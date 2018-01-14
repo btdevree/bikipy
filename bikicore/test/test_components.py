@@ -4,7 +4,7 @@
 import pytest
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
-from bikipy.bikicore.exceptions import ComponentNotValidError
+from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 #---- Testing fixtures ----
 
@@ -46,6 +46,11 @@ def default_Model_instance(default_Drug_instance, default_Protein_instance):
     newmodel.protein_list.append(default_Protein_instance)
     return newmodel
 
+# Create a default Model object from bkcm for reuse in tests
+@pytest.fixture()
+def default_Rule_instance(default_Model_instance):
+    return bkcc.Rule(default_Model_instance)
+
 # ---- Unit tests ----
 
 # --Tests for Drug objects--
@@ -53,7 +58,6 @@ def default_Model_instance(default_Drug_instance, default_Protein_instance):
 # Test if Drug objects have the required properties
 def test_Drug_has_name(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'name')
-    
 def test_Drug_has_symbol(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'symbol')
     
@@ -62,13 +66,10 @@ def test_Drug_has_symbol(default_Drug_instance):
 # Test if Protein objects have the required properties
 def test_Protein_has_name(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'name')
-    
 def test_Protein_has_symbol(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'symbol')
-    
 def test_Protein_has_conformation_names(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'conformation_names')
-    
 def test_Protein_has_conformation_symbols(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'conformation_symbols')
     
@@ -87,11 +88,9 @@ def test_Protein_wrong_number_conformation_names(default_Protein_instance):
 # Test if State objects have the required properties
 def test_State_has_name(default_State_instance):
     assert hasattr(default_State_instance, 'name')
-    
 def test_State_has_number(default_State_instance):
     assert hasattr(default_State_instance, 'number')
-
-def test_State_has_IDnumber(default_State_instance):
+def test_State_has_ID(default_State_instance):
     assert hasattr(default_State_instance, 'ID')
 
 # --Tests for ConformationalChange objects--
@@ -99,32 +98,96 @@ def test_State_has_IDnumber(default_State_instance):
 # Test if ConformationalChange objects have the required properties
 def test_ConfChange_has_name(default_ConfChange_instance):
     assert hasattr(default_ConfChange_instance, 'name')
-    
 def test_ConfChange_has_number(default_ConfChange_instance):
     assert hasattr(default_ConfChange_instance, 'number')
-
-def test_ConfChange_has_IDnumber(default_ConfChange_instance):
+def test_ConfChange_has_ID(default_ConfChange_instance):
     assert hasattr(default_ConfChange_instance, 'ID')
     
 #Test if Association objects have the required properties
 def test_Association_has_name(default_Association_instance):
     assert hasattr(default_Association_instance, 'name')
-    
 def test_Association_has_number(default_Association_instance):
     assert hasattr(default_Association_instance, 'number')
-
-def test_Association_has_IDnumber(default_Association_instance):
+def test_Association_has_ID(default_Association_instance):
     assert hasattr(default_Association_instance, 'ID')
     
 #Test if Dissociation objects have the required properties
 def test_Dissociation_has_name(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'name')
-    
 def test_Dissociation_has_number(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'number')
-
-def test_Dissociation_has_IDnumber(default_Dissociation_instance):
+def test_Dissociation_has_ID(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'ID')       
     
 # --Tests for Rule objects--
+
+#Test if Rule objects have the required properties
+def test_Rule_has_subject(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'rule_subject')
+def test_Rule_has_subject_conf(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'subject_conf')
+def test_Rule_has_subject_conf_list(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'subject_conf_list')
+def test_Rule_has_object(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'rule_object')
+def test_Rule_has_object_conf(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'object_conf')
+def test_Rule_has_object_conf_list(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'subject_conf_list')
+def test_Rule_has_rule(default_Rule_instance):
+    assert hasattr(default_Rule_instance, 'rule')
+
+#Test if the rule raises RuleNotValidError correctly
+def test_Rule_check_drug_subject1(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # Ideal values
+    dri.rule_subject = default_Drug_instance
+    dri.subject_conf = None
+    dri.subject_conf_list = []
+    dri.check_rule_traits() #No error expected
+
+def test_Rule_check_drug_subject2(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # A full conf_list should not change behavior when None is selected
+    dri.rule_subject = default_Drug_instance
+    dri.subject_conf = None
+    dri.subject_conf_list = [1, 2, 3]
+    dri.check_rule_traits() #No error expected
+    
+def test_Rule_check_drug_subject3(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # An empty conf_list required when 'select' is selected
+    dri.rule_subject = default_Drug_instance
+    dri.subject_conf = 'select'
+    dri.subject_conf_list = []
+    dri.check_rule_traits() #No error expected
+
+def test_Rule_check_drug_subject4(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule improperly and call check_rule_traits
+    # An empty conf_list required when 'select' is selected
+    dri.rule_subject = default_Drug_instance
+    dri.subject_conf = 'select'
+    dri.subject_conf_list = [1, 2, 3]
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected
+
+def test_Rule_check_drug_subject5(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule improperly and call check_rule_traits
+    # Cannot have 'all' selected
+    dri.rule_subject = default_Drug_instance
+    dri.subject_conf = 'all'
+    dri.subject_conf_list = []
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected    
+      
 #continue with writing tests.....

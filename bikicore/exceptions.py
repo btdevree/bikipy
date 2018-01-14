@@ -11,3 +11,10 @@ class ComponentNotValidError(BikipyException):
     def __init__(self, message = ''):
         super().__init__(message)
 
+class RuleNotValidError(BikipyException):
+    """Exception for when a rule object is not in a valid configuration."""
+    
+    # Hand message to the base exception module
+    def __init__(self, message = ''):
+        super().__init__(message)
+
