@@ -13,10 +13,10 @@ class Model(HasTraits):
     name = Str
     parent_model = Instance(This)
     ID = Instance(uuid.UUID)
-    drug_list = List(bkcc.Drug)
-    protein_list = List(bkcc.Protein)
+    drug_list = List(Instance(bkcc.Drug))
+    protein_list = List(Instance(bkcc.Protein))
     #compartment_list = List(bkcc.Compartment) #To be implemented in future
-    rule_list = List(bkcc.Rule)
+    rule_list = List(Instance(bkcc.Rule))
     
     def __init__(self, number, name, parent_model, *args, **kwargs):
         super().__init__(*args, **kwargs) #Make sure to call the HasTraits initialization machinery

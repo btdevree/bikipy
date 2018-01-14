@@ -67,12 +67,40 @@ class Rule(HasTraits):
     # To make sense of the variable names, think of rules as simple sentences 
     #    with a grammatical subject and and object. It is unfortunate that 
     #    object-oriented programming also shares terminology with grammar.
- 
+    
     # Traits initialization
-    rule_subject = Enum(Instance(Drug), Instance(Protein), Instance(State),Instance(StateTransition))
-    subject_conf_list = Enum(None, "all", List(Int)) #Allow two special values or an index for the list of protein conformations
-    rule_object = Enum(Instance(Drug), Instance(Protein), Instance(State), Instance(StateTransition))
-    object_conf_list = Enum(None, "all", List(Int))
+    subject_conf = Enum(None, 'all', 'select')
+    subject_conf_list = List(Int)
+    object_conf = Enum(None, 'all', 'select')
+    object_conf_list = List(Int)
+    # Note: rule_subject and rule_object defined dynamically in __init__ as Enum(all listed Drug and Protein objects in the Model)
+    
+    # Possible rules
+    rule_choices = [' associates with ',
+                    ' dissociates from ',
+                    ' reversibly associates with ',
+                    ' associates and dissociates in rapid equlibrium with ',
+                    ' converts to state ',
+                    ' reversibly converts to state ',
+                    ' converts in rapid equlibrium to state ',
+                    ' does not exist in the same complex as ',
+                    ' can only be in complex along with ']
+                   #' is constrained to be the same value as ',
+                   #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
+    rule = Enum(*rule_choices)
+    
+    # Create a list of possible component choices before completeing Traits initalization
+    def __init__(self, model, *args, **kwargs):
+        self.components = [*model.drug_list, *model.protein_list]
+        self.add_trait('rule_subject', [*self.components])
+        self.add_trait('rule_object', [*self.components]) 
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
+    
+        
+        
+    
+    
+    
         
     
 
