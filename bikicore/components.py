@@ -92,8 +92,8 @@ class Rule(HasTraits):
     # Create a list of possible component choices before completeing Traits initalization
     def __init__(self, model, *args, **kwargs):
         self.components = [*model.drug_list, *model.protein_list]
-        self.add_trait('rule_subject', [*self.components])
-        self.add_trait('rule_object', [*self.components]) 
+        self.add_trait('rule_subject', Enum(*self.components))
+        self.add_trait('rule_object', Enum(*self.components)) 
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
     
         

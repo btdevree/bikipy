@@ -17,8 +17,7 @@ class ModelCreator(HasTraits):
     #Initialize traits
     current_model = Instance(bkcm.Model)
     model_list = List(Instance(bkcm.Model))    
-    
-                    
+          
     #Menu Bar methods
     def new_model(self):
         new_model = bkcm.create_new_model('new', self.model_list)

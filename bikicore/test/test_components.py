@@ -3,6 +3,7 @@
 """
 import pytest
 import bikipy.bikicore.components as bkcc
+import bikipy.bikicore.model as bkcm
 from bikipy.bikicore.exceptions import ComponentNotValidError
 
 #---- Testing fixtures ----
@@ -36,7 +37,15 @@ def default_Association_instance():
 @pytest.fixture()
 def default_Dissociation_instance():
     return bkcc.Dissociation()
-    
+
+# Create a default Model object from bkcm for reuse in tests
+@pytest.fixture()
+def default_Model_instance(default_Drug_instance, default_Protein_instance):
+    newmodel = bkcm.Model(1, 'default model', None)
+    newmodel.drug_list.append(default_Drug_instance)
+    newmodel.protein_list.append(default_Protein_instance)
+    return newmodel
+
 # ---- Unit tests ----
 
 # --Tests for Drug objects--
@@ -116,3 +125,6 @@ def test_Dissociation_has_number(default_Dissociation_instance):
 
 def test_Dissociation_has_IDnumber(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'ID')       
+    
+# --Tests for Rule objects--
+#continue with writing tests.....
