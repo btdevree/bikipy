@@ -189,5 +189,56 @@ def test_Rule_check_drug_subject5(default_Rule_instance, default_Drug_instance):
     dri.subject_conf_list = []
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected    
-      
+
+def test_Rule_check_drug_object6(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # Ideal values
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = None
+    dri.object_conf_list = []
+    dri.check_rule_traits() #No error expected
+
+def test_Rule_check_drug_object7(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # A full conf_list should not change behavior when None is selected
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = None
+    dri.object_conf_list = [1, 2, 3]
+    dri.check_rule_traits() #No error expected
+    
+def test_Rule_check_drug_object8(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    # An empty conf_list required when 'select' is selected
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = 'select'
+    dri.object_conf_list = []
+    dri.check_rule_traits() #No error expected
+
+def test_Rule_check_drug_object9(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule improperly and call check_rule_traits
+    # An empty conf_list required when 'select' is selected
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = 'select'
+    dri.object_conf_list = [1, 2, 3]
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected
+
+def test_Rule_check_drug_object10(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule improperly and call check_rule_traits
+    # Cannot have 'all' selected
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = 'all'
+    dri.object_conf_list = []
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected      
 #continue with writing tests.....

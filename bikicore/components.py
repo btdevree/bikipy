@@ -77,16 +77,16 @@ class Rule(HasTraits):
     
     # Possible rules
     _rule_choices = [' associates with ',
-                    ' dissociates from ',
-                    ' reversibly associates with ',
-                    ' associates and dissociates in rapid equlibrium with ',
-                    ' converts to state ',
-                    ' reversibly converts to state ',
-                    ' converts in rapid equlibrium to state ',
-                    ' does not exist in the same complex as ',
-                    ' can only be in complex along with ']
-                   #' is constrained to be the same value as ',
-                   #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
+                     ' dissociates from ',
+                     ' reversibly associates with ',
+                     ' associates and dissociates in rapid equlibrium with ',
+                     ' converts to state ',
+                     ' reversibly converts to state ',
+                     ' converts in rapid equlibrium to state ',
+                     ' does not exist in the same complex as ',
+                     ' can only be in complex along with ']
+                     #' is constrained to be the same value as ',
+                     #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
     rule = Enum(*_rule_choices)
     
     # Create a list of possible component choices before completeing Traits initalization
@@ -102,6 +102,9 @@ class Rule(HasTraits):
         # Drugs do not have conformations
         if isinstance(self.rule_subject, Drug):
             if self.subject_conf != None and not (self.subject_conf == 'select' and self.subject_conf_list == []):
+                raise RuleNotValidError('Drugs cannot have conformations')
+        if isinstance(self.rule_object, Drug):
+            if self.object_conf != None and not (self.object_conf == 'select' and self.object_conf_list == []):
                 raise RuleNotValidError('Drugs cannot have conformations')
             
         
