@@ -11,17 +11,17 @@ from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 class Drug(HasTraits):
     
     # Traits initialization
-    name = Str('adrenaline')
-    symbol = Str('A')
+    name = Str()
+    symbol = Str()
     ID = Instance(uuid.UUID) 
     
 class Protein(HasTraits):
     
     # Traits initialization
-    name = Str('beta adrenergic receptor')
-    symbol = Str('R')
-    conformation_names = List(Str(['inactive', 'active'])) 
-    conformation_symbols = List(Str(['', '*']))
+    name = Str()
+    symbol = Str()
+    conformation_names = List(Str()) 
+    conformation_symbols = List(Str())
     ID = Instance(uuid.UUID) 
     
     # Check if the trait values are valid. Use after user editing of the object, for example.
@@ -102,9 +102,20 @@ class Rule(HasTraits):
         # Drugs do not have conformations
         if isinstance(self.rule_subject, Drug):
             if self.subject_conf != None and not (self.subject_conf == 'select' and self.subject_conf_list == []):
-                raise RuleNotValidError('Drugs cannot have conformations')
+                raise RuleNotValidError('Drugs cannot have selected conformations')
         if isinstance(self.rule_object, Drug):
             if self.object_conf != None and not (self.object_conf == 'select' and self.object_conf_list == []):
-                raise RuleNotValidError('Drugs cannot have conformations')
-            
+                raise RuleNotValidError('Drugs cannot have selected conformations')
+                
+        # Proteins must have at least one conformation chosen and cannot choose more conformations than are available
+        if isinstance(self.rule_subject, Protein):
+            if self.subject_conf == None or (self.subject_conf == 'select' and self.subject_conf_list == []):
+                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+            if self.subject_conf == 'select' and any(index >= len(self.rule_subject.conformation_names) for index in self.subject_conf_list):
+                raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
+        if isinstance(self.rule_object, Protein):
+            if self.object_conf == None or (self.object_conf == 'select' and self.object_conf_list == []):
+                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+            if self.object_conf == 'select' and any(index >= len(self.rule_object.conformation_names) for index in self.object_conf_list):
+                raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
         
