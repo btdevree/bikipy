@@ -5,31 +5,35 @@ import uuid
 import bikipy.bikicore.components as bkcc
 from traits.api import HasTraits, Int, Str, Instance, This, List
 
-#Model class
+# Model class
 class Model(HasTraits):
     
-    #Initalize traits
+    # Initalize traits
     number = Int
     name = Str
     parent_model = Instance(This)
     ID = Instance(uuid.UUID)
     drug_list = List(Instance(bkcc.Drug))
     protein_list = List(Instance(bkcc.Protein))
-    #compartment_list = List(bkcc.Compartment) #To be implemented in future
+    # compartment_list = List(bkcc.Compartment) #To be implemented in future
     rule_list = List(Instance(bkcc.Rule))
     
     def __init__(self, number, name, parent_model, *args, **kwargs):
-        super().__init__(*args, **kwargs) #Make sure to call the HasTraits initialization machinery
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
         self.number = number
         self.name = name
         self.parent_model
         self.ID = uuid.uuid4()
     
     def _copy_from(model_to_copy):
-        #Code to duplicate the structure of a model with new objects
+        # Code to duplicate the structure of a model with new objects
         pass           
-          
-#Model creation method
+    
+    def generate_network(included_component_list = 'all'):
+        # Create a network graph of the model by using the list of rules. 
+        pass
+    
+# Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
     
@@ -45,7 +49,8 @@ def create_new_model(new_model_type, model_list, model_to_copy = None):
             new_model = Model(new_number, new_name, model_to_copy.parent_model)
         new_model._copy_from(model_to_copy)
     return new_model
-    
+
+# Model creation helper method
 def _find_next_model_number(model_list):
     found_numbers = {model.number for model in model_list}
     current_int = 1

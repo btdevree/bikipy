@@ -35,8 +35,8 @@ class Protein(HasTraits):
 class State(HasTraits):
     
     # Traits initialization
-    name = Str('1')
-    number = Int(1)
+    name = Str()
+    number = Int()
     ID = Instance(uuid.UUID)
 
 # Define classes for the different types of state transitions - edges on network graph
@@ -44,7 +44,7 @@ class StateTransition(HasTraits):
     #Superclass for all transition objects
     
     # Traits initialization
-    number = Int(1)
+    number = Int()
     ID = Instance(uuid.UUID)
     
 class ConformationalChange(StateTransition):
@@ -56,12 +56,27 @@ class Association(StateTransition):
     
     # Traits initialization
     name = Str('association')
-    
+
 class Dissociation(StateTransition):
     
     # Traits initialization
     name = Str('dissociation')
 
+class RE_ConformationalChange(StateTransition):
+    
+    # Traits initialization
+    name = Str('activation')    
+
+class RE_Dissociation(StateTransition):
+    
+    # Traits initialization
+    name = Str('dissociation')
+    
+class RE_Association(StateTransition):
+    
+    # Traits initialization
+    name = Str('association')
+    
 # Define classes for the components used to build the model
 class Rule(HasTraits):
     # To make sense of the variable names, think of rules as simple sentences 

@@ -45,6 +45,21 @@ def default_Association_instance():
 @pytest.fixture()
 def default_Dissociation_instance():
     return bkcc.Dissociation()
+    
+# Create a default RE_ConformationalChange object for reuse in tests
+@pytest.fixture()
+def default_RE_ConfChange_instance():
+    return bkcc.RE_ConformationalChange()
+    
+# Create a default RE_Association object for reuse in tests
+@pytest.fixture()
+def default_RE_Association_instance():
+    return bkcc.RE_Association()
+
+# Create a default RE_Dissociation object for reuse in tests
+@pytest.fixture()
+def default_RE_Dissociation_instance():
+    return bkcc.RE_Dissociation()
 
 # Create a default Model object from bkcm for reuse in tests
 @pytest.fixture()
@@ -125,7 +140,31 @@ def test_Dissociation_has_name(default_Dissociation_instance):
 def test_Dissociation_has_number(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'number')
 def test_Dissociation_has_ID(default_Dissociation_instance):
-    assert hasattr(default_Dissociation_instance, 'ID')       
+    assert hasattr(default_Dissociation_instance, 'ID')
+    
+# Test if RE_ConformationalChange objects have the required properties
+def test_RE_ConfChange_has_name(default_RE_ConfChange_instance):
+    assert hasattr(default_RE_ConfChange_instance, 'name')
+def test_RE_ConfChange_has_number(default_RE_ConfChange_instance):
+    assert hasattr(default_RE_ConfChange_instance, 'number')
+def test_RE_ConfChange_has_ID(default_RE_ConfChange_instance):
+    assert hasattr(default_RE_ConfChange_instance, 'ID')
+    
+#Test if RE_Association objects have the required properties
+def test_RE_Association_has_name(default_RE_Association_instance):
+    assert hasattr(default_RE_Association_instance, 'name')
+def test_RE_Association_has_number(default_RE_Association_instance):
+    assert hasattr(default_RE_Association_instance, 'number')
+def test_RE_Association_has_ID(default_RE_Association_instance):
+    assert hasattr(default_RE_Association_instance, 'ID')
+    
+#Test if RE_Dissociation objects have the required properties
+def test_RE_Dissociation_has_name(default_RE_Dissociation_instance):
+    assert hasattr(default_RE_Dissociation_instance, 'name')
+def test_RE_Dissociation_has_number(default_RE_Dissociation_instance):
+    assert hasattr(default_RE_Dissociation_instance, 'number')
+def test_RE_Dissociation_has_ID(default_RE_Dissociation_instance):
+    assert hasattr(default_RE_Dissociation_instance, 'ID')       
     
 # --Tests for Rule objects--
 
