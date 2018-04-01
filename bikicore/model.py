@@ -24,13 +24,20 @@ class Model(HasTraits):
         self.name = name
         self.parent_model
         self.ID = uuid.uuid4()
+        self.drug_list = []
+        self.protein_list = []
+        self.rule_list = []
     
-    def _copy_from(model_to_copy):
+    def _copy_from(self, model_to_copy):
         # Code to duplicate the structure of a model with new objects
         pass           
     
-    def generate_network(included_component_list = 'all'):
+    def generate_network(self):
         # Create a network graph of the model by using the list of rules. 
+        
+        # Create a new Network object
+        self.network = bkcc.Network()
+     
         pass
     
 # Model creation method

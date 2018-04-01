@@ -16,7 +16,7 @@ def default_Drug_instance():
     ddi.symbol = 'A'
     return ddi
     
-# Create a default Drug object for reuse in tests
+# Create a default Protein object for reuse in tests
 @pytest.fixture()
 def default_Protein_instance():
     dpi = bkcc.Protein()
@@ -69,10 +69,15 @@ def default_Model_instance(default_Drug_instance, default_Protein_instance):
     newmodel.protein_list.append(default_Protein_instance)
     return newmodel
 
-# Create a default Model object from bkcm for reuse in tests
+# Create a default Rule object for reuse in tests
 @pytest.fixture()
 def default_Rule_instance(default_Model_instance):
     return bkcc.Rule(default_Model_instance)
+    
+# Create a default Network object for reuse in tests
+@pytest.fixture()
+def default_Network_instance():
+    return bkcc.Network()
 
 # ---- Unit tests ----
 
@@ -415,6 +420,10 @@ def test_Rule_check_protein_object22(default_Rule_instance, default_Protein_inst
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 
-        
+# --Tests for Network objects--
+
+#Test if Network objects have the required properties
+def test_Network_has_main_graph(default_Network_instance):
+    assert hasattr(default_Network_instance, 'main_graph')
      
 #continue with writing tests.....

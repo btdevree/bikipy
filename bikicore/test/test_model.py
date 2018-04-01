@@ -2,7 +2,9 @@
 
 """
 import pytest
+import networkx as nx
 import bikipy.bikicore.model as bkcm
+import bikipy.bikicore.components as bkcc
 
 #---- Testing fixtures ----
 
@@ -16,7 +18,33 @@ def default_Model_list():
     model_list = [bkcm.Model(1, 'Default-1', None),
                 bkcm.Model(2, 'Default-2', None),
                 bkcm.Model(4, 'Default-4', None)]
-    return model_list            
+    return model_list
+    
+# Create a default Drug object for reuse in tests
+@pytest.fixture()
+def default_Drug_instance():
+    ddi = bkcc.Drug()
+    ddi.name = 'adrenaline'
+    ddi.symbol = 'A'
+    return ddi
+    
+# Create a default Protein object for reuse in tests
+@pytest.fixture()
+def default_Protein_instance():
+    dpi = bkcc.Protein()
+    dpi.name = 'beta adrenergic receptor'
+    dpi.symbol = 'R'
+    dpi.conformation_names = ['inactive', 'active']
+    dpi.conformation_symbols = ['', '*']
+    return dpi
+
+# Create a default Model object from bkcm for reuse in tests
+@pytest.fixture()
+def default_Model_instance(default_Drug_instance, default_Protein_instance):
+    newmodel = bkcm.Model(1, 'default model', None)
+    newmodel.drug_list.append(default_Drug_instance)
+    newmodel.protein_list.append(default_Protein_instance)
+    return newmodel
     
 # ---- Unit tests ----
 
@@ -45,8 +73,49 @@ def test_Model_has_rule_list(default_Model_instance):
     assert hasattr(default_Model_instance, 'rule_list')
 
 def test_Model_has_compartment_list(default_Model_instance):
-    assert not hasattr(default_Model_instance, 'compartment_list')
+    assert not hasattr(default_Model_instance, 'compartment_list') #not implemented yet
+
+# -- Tests for model class methods --
+
+# An empty graph should be made with an empty rule list
+def test_Model_generate_network_null(default_Model_instance):
+    dmi = default_Model_instance
+    dmi.generate_network()
     
+    # Create comparision graph shape
+    testgraph = nx.DiGraph([]) #empty graph
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    
+# Test that the 'associates with' rule creates a valid graph 
+def test_Model_generate_network_Irr_association(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup rule for simple drug association
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = dmi.drug_list[0]
+    r1.subject_conf = None
+    r1.rule = ' associates with '
+    r1.rule_object = dmi.protein_list[0]
+    r1.object_conf = 'all'
+    r1.check_rule_traits()
+    
+    # Attach rule to model and generate network
+    dmi.rule_list = [r1]
+    dmi.generate_network()
+    
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1,2])
+    testgraph.add_edge(1,2)
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+
+
+# -- Helper method tests in model.py --    
+            
 # Test for creation methods
 def test_create_new(default_Model_list):
     # Add in when copy logic is created
