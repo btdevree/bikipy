@@ -26,11 +26,6 @@ def default_Protein_instance():
     dpi.conformation_symbols = ['', '*']
     return dpi
 
-# Create a default State object for reuse in tests
-@pytest.fixture()
-def default_State_instance():
-    return bkcc.State()
-
 # Create a default ConformationalChange object for reuse in tests
 @pytest.fixture()
 def default_ConfChange_instance():
@@ -78,6 +73,12 @@ def default_Rule_instance(default_Model_instance):
 @pytest.fixture()
 def default_Network_instance():
     return bkcc.Network()
+    
+# Create a default State object for reuse in tests
+@pytest.fixture()
+def default_State_instance():
+    return bkcc.State()
+
 
 # ---- Unit tests ----
 
@@ -120,6 +121,13 @@ def test_State_has_number(default_State_instance):
     assert hasattr(default_State_instance, 'number')
 def test_State_has_ID(default_State_instance):
     assert hasattr(default_State_instance, 'ID')
+def test_State_has_req_drug_list(default_State_instance):
+    assert hasattr(default_State_instance, 'required_drug_list')
+def test_State_has_req_protein_list(default_State_instance):
+    assert hasattr(default_State_instance, 'required_protein_list')
+def test_State_has_req_protein_conf_list(default_State_instance):
+    assert hasattr(default_State_instance, 'req_protein_conf_list')
+
 
 # --Tests for ConformationalChange objects--
 

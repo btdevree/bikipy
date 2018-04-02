@@ -83,7 +83,8 @@ def test_Model_generate_network_null(default_Model_instance):
     dmi.generate_network()
     
     # Create comparision graph shape
-    testgraph = nx.DiGraph([]) #empty graph
+    testgraph = nx.DiGraph([]) 
+    testgraph.add_nodes([1, 2, 3]) # Three unconnected nodes
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)

@@ -1,3 +1,4 @@
 {
-  "bikicore/test/test_model.py::test_Model_generate_network_Irr_association": true
+  "bikicore/test/test_model.py::test_Model_generate_network_Irr_association": true,
+  "bikicore/test/test_model.py::test_Model_generate_network_null": true
 }

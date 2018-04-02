@@ -5,7 +5,8 @@ biochemical system, the model, and the experiments performed.
 
 import uuid
 import networkx as nx
-from traits.api import HasTraits, Str, List, Int, Instance, Enum
+import numpy as np
+from traits.api import HasTraits, Str, List, Int, Instance, Enum, Either
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 # Define classes for the different components of the biochemical system
@@ -37,10 +38,24 @@ class State(HasTraits):
     
     # Traits initialization
     name = Str()
+    symbol = Str()
     number = Int()
     ID = Instance(uuid.UUID)
+    required_drug_list = List(Instance(Drug))
+    required_protein_list = List(Instance(Protein))
+    req_protein_conf_list = List(Int())
     
-
+    # Want to give a new state a number right away, determined by the network generation code
+    def __init__(self, number, *args, **kwargs):
+        self.number = number
+        self.ID = uuid.uuid4()
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
+    
+    def autosymbol(self):
+        pass
+    def autoname(self):
+        pass
+        
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    
     #Superclass for all transition objects
