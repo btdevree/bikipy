@@ -45,12 +45,12 @@ class State(HasTraits):
     required_protein_list = List(Instance(Protein))
     req_protein_conf_list = List(Int())
     
-    # Want to give a new state a number right away, determined by the network generation code
-    def __init__(self, number, *args, **kwargs):
-        self.number = number
+    # Want to give a new state an ID right away, determined by the network generation code
+    def __init__(self, *args, **kwargs):
         self.ID = uuid.uuid4()
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
     
+    # Names and symbols are created from the properties of the state, but the state's number is generated at a model level or carried over from parent models
     def autosymbol(self):
         pass
     def autoname(self):
@@ -79,6 +79,7 @@ class Dissociation(StateTransition):
     # Traits initialization
     name = Str('dissociation')
 
+### Leave these for now, but they shouold be simple enough to make when the basic structure of the library is finished
 class RE_ConformationalChange(StateTransition):
     
     # Traits initialization

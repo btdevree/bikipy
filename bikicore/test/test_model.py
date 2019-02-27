@@ -7,18 +7,6 @@ import bikipy.bikicore.model as bkcm
 import bikipy.bikicore.components as bkcc
 
 #---- Testing fixtures ----
-
-# Create a default Model object for reuse in tests
-@pytest.fixture()
-def default_Model_instance():
-    return bkcm.Model(1, 'Default-1', None)
-    
-@pytest.fixture()
-def default_Model_list():
-    model_list = [bkcm.Model(1, 'Default-1', None),
-                bkcm.Model(2, 'Default-2', None),
-                bkcm.Model(4, 'Default-4', None)]
-    return model_list
     
 # Create a default Drug object for reuse in tests
 @pytest.fixture()
@@ -38,13 +26,20 @@ def default_Protein_instance():
     dpi.conformation_symbols = ['', '*']
     return dpi
 
-# Create a default Model object from bkcm for reuse in tests
+# Create a default Model object with empty graph from bkcm for reuse in tests
 @pytest.fixture()
 def default_Model_instance(default_Drug_instance, default_Protein_instance):
-    newmodel = bkcm.Model(1, 'default model', None)
+    newmodel = bkcm.Model(1, 'Default Null Model', None)
     newmodel.drug_list.append(default_Drug_instance)
     newmodel.protein_list.append(default_Protein_instance)
     return newmodel
+
+@pytest.fixture()
+def default_Model_list():
+    model_list = [bkcm.Model(1, 'Default-1', None),
+                bkcm.Model(2, 'Default-2', None),
+                bkcm.Model(4, 'Default-4', None)]
+    return model_list
     
 # ---- Unit tests ----
 
@@ -84,7 +79,6 @@ def test_Model_generate_network_null(default_Model_instance):
     
     # Create comparision graph shape
     testgraph = nx.DiGraph([]) 
-    testgraph.add_nodes([1, 2, 3]) # Three unconnected nodes
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
