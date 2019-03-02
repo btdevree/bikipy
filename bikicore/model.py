@@ -35,9 +35,25 @@ class Model(HasTraits):
     def generate_network(self):
         # Create a network graph of the model by using the list of rules. 
         
-        # Create a new Network object
+        # Create a new Network object and work with main_graph for the next block
         self.network = bkcc.Network()
-     
+      
+        # Add singleton states to graph
+        for current_component in self.drug_list:
+            new_state = bkcc.State()
+            new_state.required_drug_list = [current_component]
+            new_state.required_protein_list = []
+            new_state.req_protein_conf_lists = [[]]
+            self.network.main_graph.add_node(new_state)
+        for current_component in self.protein_list:
+            new_state = bkcc.State()
+            new_state.required_drug_list = []
+            new_state.required_protein_list = [current_component]
+            new_state.req_protein_conf_lists = [list(range(len(current_component.conformation_names)))]
+            self.network.main_graph.add_node(new_state)
+        #new_states = [bkcc.State(x) for x in [self.drug_list, self.protein_list]]
+
+        
         pass
     
 # Model creation method

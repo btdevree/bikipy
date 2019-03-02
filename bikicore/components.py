@@ -43,7 +43,7 @@ class State(HasTraits):
     ID = Instance(uuid.UUID)
     required_drug_list = List(Instance(Drug))
     required_protein_list = List(Instance(Protein))
-    req_protein_conf_list = List(Int())
+    req_protein_conf_lists = List(List(Int()))
     
     # Want to give a new state an ID right away, determined by the network generation code
     def __init__(self, *args, **kwargs):
@@ -157,16 +157,21 @@ class Rule(HasTraits):
             if self.object_conf == 'select' and any(index >= len(self.rule_object.conformation_names) for index in self.object_conf_list):
                 raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
 
-# Define class for the network graph of the different states
+# Define class as a container for the network graphs of states
+# Do we really want a seperate container that's just added onto a Model class? Don't know yet
 class Network(HasTraits):
     # Biochemical networks are stored and manipulated using NetworkX graphs.
     
     # Traits initialization
     main_graph = Instance(nx.DiGraph)
-    #display_graphs = List(Instance(nx.DiGraph))
-    #solving_graphs = List(Instance(nx.DiGraph))
+    display_graphs = List(Instance(nx.DiGraph))
+    solving_graphs = List(Instance(nx.DiGraph))
     
-    # Initial network is an empty graph
+    # Initial network is an empty main_graph and empty lists of derivitive graphs
     def __init__(self, *args, **kwargs):
-        self.main_graph = nx.DiGraph()   
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
+        self.main_graph = nx.DiGraph()
+        self.display_graphs = []
+        self.solving_graphs = []
+        
     

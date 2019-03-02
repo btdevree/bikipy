@@ -87,7 +87,7 @@ def test_Model_generate_network_null(default_Model_instance):
 def test_Model_generate_network_Irr_association(default_Model_instance):
     dmi = default_Model_instance
     
-    #Setup rule for simple drug association
+    #Setup rule for simple drug association - "A associates with R"
     r1 = bkcc.Rule(dmi)
     r1.rule_subject = dmi.drug_list[0]
     r1.subject_conf = None
@@ -102,8 +102,8 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1,2])
-    testgraph.add_edge(1,2)
+    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_edges_from([(1,3), (2,3)])
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)

@@ -126,7 +126,7 @@ def test_State_has_req_drug_list(default_State_instance):
 def test_State_has_req_protein_list(default_State_instance):
     assert hasattr(default_State_instance, 'required_protein_list')
 def test_State_has_req_protein_conf_list(default_State_instance):
-    assert hasattr(default_State_instance, 'req_protein_conf_list')
+    assert hasattr(default_State_instance, 'req_protein_conf_lists')
 
 
 # --Tests for ConformationalChange objects--
