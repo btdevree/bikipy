@@ -49,12 +49,45 @@ class Model(HasTraits):
             new_state = bkcc.State()
             new_state.required_drug_list = []
             new_state.required_protein_list = [current_component]
-            new_state.req_protein_conf_lists = [list(range(len(current_component.conformation_names)))]
+            new_state.req_protein_conf_lists = [list(range(len(current_component.conformation_names)))] # Allow all conformations
             self.network.main_graph.add_node(new_state)
+        
+        # Apply each rule
+        for current_rule in self.rule_list:
+            
+            # Break into basic relationships
+            if current_rule.rule == ' associates with ':
+                
+                #fill in states directly for now
+                states = [x for x in self.network.main_graph.__iter__()]
+                state1 = states[0]
+                state2 = states[1]
+                self._create_association(state1, state2)
+            # Make association steps
+        
+    def _create_association(self, state1, state2):
+        # Helper function to connect two states into an association relationship
+        # Creates a new associated state if one cannot be found already
+        
+        # Look for an associated state
+        associated_drug_list = [*state1.required_drug_list, *state2.required_drug_list]
+        associated_protein_list = [*state1.required_protein_list, *state2.required_protein_list]
+        associated_conf_list = [*state1.req_protein_conf_lists, *state2.req_protein_conf_lists]
+        #DO LATER, search for a state with these components, assign to state12
+        
+        # Make a new associated state
+        state12 = bkcc.State()
+        state12.required_drug_list = associated_drug_list
+        state12.required_protein_list = associated_protein_list
+        state12.req_protein_conf_lists = associated_conf_list
+        
+        # Connect states 
+        self.network.main_graph.add_edge(state1, state12)# (NeworkX silently adds a new node if state12 does not already exist)
+        self.network.main_graph.add_edge(state2, state12)
+        
         #new_states = [bkcc.State(x) for x in [self.drug_list, self.protein_list]]
 
-        
-        pass
+
     
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
@@ -80,6 +113,7 @@ def _find_next_model_number(model_list):
     while ({current_int} & found_numbers) != set():
        current_int += 1
     return current_int
-    
+
+
         
     

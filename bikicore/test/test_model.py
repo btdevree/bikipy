@@ -72,13 +72,14 @@ def test_Model_has_compartment_list(default_Model_instance):
 
 # -- Tests for model class methods --
 
-# An empty graph should be made with an empty rule list
+# A graph of non-connected singletons should be made with an empty rule list
 def test_Model_generate_network_null(default_Model_instance):
     dmi = default_Model_instance
     dmi.generate_network()
     
     # Create comparision graph shape
-    testgraph = nx.DiGraph([]) 
+    testgraph = nx.DiGraph([])
+    testgraph.add_nodes_from([1,2])
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
@@ -107,7 +108,6 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
-
 
 # -- Helper method tests in model.py --    
             
