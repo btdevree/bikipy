@@ -105,10 +105,8 @@ class Rule(HasTraits):
     # object-oriented programming also shares terminology with grammar.
     
     # Traits initialization
-    subject_conf = Enum(None, 'all', 'select')
-    subject_conf_list = List(Int)
-    object_conf = Enum(None, 'all', 'select')
-    object_conf_list = List(Int)
+    subject_conf = Either(List(Int), None)
+    object_conf = Either(List(Int), None)
     # Note: rule_subject and rule_object defined dynamically in __init__ as Enum(all listed Drug and Protein objects in the Model)
     
     # Possible rules
@@ -139,22 +137,27 @@ class Rule(HasTraits):
         
         # Drugs do not have conformations
         if isinstance(self.rule_subject, Drug):
-            if self.subject_conf != None and not (self.subject_conf == 'select' and self.subject_conf_list == []):
-                raise RuleNotValidError('Drugs cannot have selected conformations')
+            if self.subject_conf != None:
+                raise RuleNotValidError('Drugs cannot have listed conformations')
+                # Drugs do not have conformations
         if isinstance(self.rule_object, Drug):
-            if self.object_conf != None and not (self.object_conf == 'select' and self.object_conf_list == []):
-                raise RuleNotValidError('Drugs cannot have selected conformations')
+            if self.object_conf != None:
+                raise RuleNotValidError('Drugs cannot have listed conformations')
                 
         # Proteins must have at least one conformation chosen and cannot choose more conformations than are available
         if isinstance(self.rule_subject, Protein):
-            if self.subject_conf == None or (self.subject_conf == 'select' and self.subject_conf_list == []):
+            if self.subject_conf == None:
                 raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.subject_conf == 'select' and any(index >= len(self.rule_subject.conformation_names) for index in self.subject_conf_list):
+            if self.subject_conf == []:
+                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+            if self.subject_conf != None and any(index >= len(self.rule_subject.conformation_names) for index in self.subject_conf):
                 raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
         if isinstance(self.rule_object, Protein):
-            if self.object_conf == None or (self.object_conf == 'select' and self.object_conf_list == []):
+            if self.object_conf == None:
                 raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.object_conf == 'select' and any(index >= len(self.rule_object.conformation_names) for index in self.object_conf_list):
+            if self.object_conf == []:
+                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+            if self.object_conf != None and any(index >= len(self.rule_object.conformation_names) for index in self.object_conf):
                 raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
 
 # Define class as a container for the network graphs of states

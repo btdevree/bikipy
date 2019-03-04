@@ -186,14 +186,10 @@ def test_Rule_has_subject(default_Rule_instance):
     assert hasattr(default_Rule_instance, 'rule_subject')
 def test_Rule_has_subject_conf(default_Rule_instance):
     assert hasattr(default_Rule_instance, 'subject_conf')
-def test_Rule_has_subject_conf_list(default_Rule_instance):
-    assert hasattr(default_Rule_instance, 'subject_conf_list')
 def test_Rule_has_object(default_Rule_instance):
     assert hasattr(default_Rule_instance, 'rule_object')
 def test_Rule_has_object_conf(default_Rule_instance):
     assert hasattr(default_Rule_instance, 'object_conf')
-def test_Rule_has_object_conf_list(default_Rule_instance):
-    assert hasattr(default_Rule_instance, 'subject_conf_list')
 def test_Rule_has_rule(default_Rule_instance):
     assert hasattr(default_Rule_instance, 'rule')
 
@@ -202,229 +198,113 @@ def test_Rule_check_drug_subject1(default_Rule_instance, default_Drug_instance):
     dri = default_Rule_instance # For typing convenience
     
     # Set up the rule properly and call check_rule_traits
-    # Ideal values
     dri.rule_subject = default_Drug_instance
     dri.subject_conf = None
-    dri.subject_conf_list = []
+    dri.check_rule_traits() #No error expected
+    
+def test_Rule_check_drug_object2(default_Rule_instance, default_Drug_instance):
+    dri = default_Rule_instance # For typing convenience
+    
+    # Set up the rule properly and call check_rule_traits
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = None
     dri.check_rule_traits() #No error expected
 
-def test_Rule_check_drug_subject2(default_Rule_instance, default_Drug_instance):
-    dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule properly and call check_rule_traits
-    # A full conf_list should not change behavior when None is selected
-    dri.rule_subject = default_Drug_instance
-    dri.subject_conf = None
-    dri.subject_conf_list = [1, 2, 3]
-    dri.check_rule_traits() # No error expected
-    
 def test_Rule_check_drug_subject3(default_Rule_instance, default_Drug_instance):
     dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule properly and call check_rule_traits
-    # An empty conf_list required when 'select' is selected
+
+    # Incorrect usage, no conformations are allowed for drugs 
     dri.rule_subject = default_Drug_instance
-    dri.subject_conf = 'select'
-    dri.subject_conf_list = []
-    dri.check_rule_traits() #No error expected
+    dri.subject_conf = [0]    
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected
 
 def test_Rule_check_drug_subject4(default_Rule_instance, default_Drug_instance):
     dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule improperly and call check_rule_traits
-    # An empty conf_list required when 'select' is selected
+
+    # Incorrect usage, None, not an empty list is reqired for drugs
     dri.rule_subject = default_Drug_instance
-    dri.subject_conf = 'select'
-    dri.subject_conf_list = [1, 2, 3]
+    dri.subject_conf = []
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 
-def test_Rule_check_drug_subject5(default_Rule_instance, default_Drug_instance):
+def test_Rule_check_drug_object5(default_Rule_instance, default_Drug_instance):
     dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule improperly and call check_rule_traits
-    # Cannot have 'all' selected
-    dri.rule_subject = default_Drug_instance
-    dri.subject_conf = 'all'
-    dri.subject_conf_list = []
+
+    # Incorrect usage, no conformations are allowed for drugs 
+    dri.rule_object = default_Drug_instance
+    dri.object_conf = [0]    
     with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected    
+        dri.check_rule_traits() # Error expected
 
 def test_Rule_check_drug_object6(default_Rule_instance, default_Drug_instance):
     dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule properly and call check_rule_traits
-    # Ideal values
-    dri.rule_object = default_Drug_instance
-    dri.object_conf = None
-    dri.object_conf_list = []
-    dri.check_rule_traits() # No error expected
 
-def test_Rule_check_drug_object7(default_Rule_instance, default_Drug_instance):
-    dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule properly and call check_rule_traits
-    # A full conf_list should not change behavior when None is selected
+    # Incorrect usage, None, not an empty list is reqired for drugs
     dri.rule_object = default_Drug_instance
-    dri.object_conf = None
-    dri.object_conf_list = [1, 2, 3]
-    dri.check_rule_traits() #No error expected
-    
-def test_Rule_check_drug_object8(default_Rule_instance, default_Drug_instance):
-    dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule properly and call check_rule_traits
-    # An empty conf_list required when 'select' is selected
-    dri.rule_object = default_Drug_instance
-    dri.object_conf = 'select'
-    dri.object_conf_list = []
-    dri.check_rule_traits() # No error expected
-
-def test_Rule_check_drug_object9(default_Rule_instance, default_Drug_instance):
-    dri = default_Rule_instance # For typing convenience
-    
-    # Set up the rule improperly and call check_rule_traits
-    # An empty conf_list required when 'select' is selected
-    dri.rule_object = default_Drug_instance
-    dri.object_conf = 'select'
-    dri.object_conf_list = [1, 2, 3]
+    dri.object_conf = []
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
-
-def test_Rule_check_drug_object10(default_Rule_instance, default_Drug_instance):
-    dri = default_Rule_instance # For typing convenience
     
-    # Set up the rule improperly and call check_rule_traits
-    # Cannot have 'all' selected
-    dri.rule_object = default_Drug_instance
-    dri.object_conf = 'all'
-    dri.object_conf_list = []
-    with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected
-
-def test_Rule_check_protein_subject11(default_Rule_instance, default_Protein_instance):
+def test_Rule_check_protein_subject7(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Usual usage with'all' selected
-    # Empty conf_list, since it is not used with 'all'
-    dri.rule_subject = default_Protein_instance
-    dri.subject_conf = 'all'
-    dri.subject_conf_list = []
-    dri.check_rule_traits() # No error expected
-
-def test_Rule_check_protein_subject12(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Allowed usage with 'all' selected
-    # Non-Empty conf_list is OK, since it is not used with 'all'
-    dri.rule_subject = default_Protein_instance
-    dri.subject_conf = 'all'
-    dri.subject_conf_list = [1, 2, 3]
-    dri.check_rule_traits() #No error expected
-    
-def test_Rule_check_protein_subject13(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Incorrect usage with 'select' selected
-    # Empty conf_list not allowed
-    dri.rule_subject = default_Protein_instance
-    dri.subject_conf = 'select'
-    dri.subject_conf_list = []
-    with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected
-
-def test_Rule_check_protein_subject14(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Usual usage with 'select' selected
-    # Non-empty conf_list given
-    dri.rule_subject = default_Protein_instance
-    dri.subject_conf = 'select'
-    dri.subject_conf_list = [0]
-    dri.check_rule_traits() # No error expected
-
-def test_Rule_check_protein_subject15(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Incorrect usage with 'select' selected
-    # Non-empty conf_list given, but contains invalid index numbers
-    dri.rule_subject = default_Protein_instance
-    dri.subject_conf = 'select'
-    dri.subject_conf_list = [1, 2, 3] # Only 0 and 1 valid for default_Protein_instanceprint
-    with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected
-
-def test_Rule_check_protein_subject16(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Incorrect usage, None selected
-    # Valid conf_list ignored
+    # Incorrect conf list given, None is not allowed for a protein
     dri.rule_subject = default_Protein_instance
     dri.subject_conf = None
-    dri.subject_conf_list = [0]    
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 
-def test_Rule_check_protein_object17(default_Rule_instance, default_Protein_instance):
+def test_Rule_check_protein_subject8(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Usual usage with'all' selected
-    # Empty conf_list, since it is not used with 'all'
+    # Incorrect conf list given, empty list is not allowed
+    dri.rule_subject = default_Protein_instance
+    dri.subject_conf = []
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected
+
+def test_Rule_check_protein_subject9(default_Rule_instance, default_Protein_instance):
+    dri = default_Rule_instance # For typing convenience
+
+    # Incorrect conf list given that contains invalid index numbers
+    dri.rule_subject = default_Protein_instance
+    dri.subject_conf = [1, 2, 3] # Only 0 and 1 valid for default_Protein_instance
+    with pytest.raises(RuleNotValidError):
+        dri.check_rule_traits() # Error expected
+
+def test_Rule_check_protein_object10(default_Rule_instance, default_Protein_instance):
+    dri = default_Rule_instance # For typing convenience
+
+    # Usual usage of conf list 
     dri.rule_object = default_Protein_instance
-    dri.object_conf = 'all'
-    dri.object_conf_list = []
+    dri.object_conf = [0]
     dri.check_rule_traits() # No error expected
 
-def test_Rule_check_protein_object18(default_Rule_instance, default_Protein_instance):
+def test_Rule_check_protein_object11(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Allowed usage with 'all' selected
-    # Non-Empty conf_list is OK, since it is not used with 'all'
+    # Incorrect conf list given that contains invalid index numbers
     dri.rule_object = default_Protein_instance
-    dri.object_conf = 'all'
-    dri.object_conf_list = [1, 2, 3]
-    dri.check_rule_traits() #No error expected
-    
-def test_Rule_check_protein_object19(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Incorrect usage with 'select' selected
-    # Empty conf_list not allowed
-    dri.rule_object = default_Protein_instance
-    dri.object_conf = 'select'
-    dri.object_conf_list = []
+    dri.object_conf = [1, 2, 3] # Only 0 and 1 valid for default_Protein_instance
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 
-def test_Rule_check_protein_object20(default_Rule_instance, default_Protein_instance):
+def test_Rule_check_protein_object12(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Usual usage with 'select' selected
-    # Non-empty conf_list given
+    # Incorrect conf list given, empty list is not allowed
     dri.rule_object = default_Protein_instance
-    dri.object_conf = 'select'
-    dri.object_conf_list = [0]
-    dri.check_rule_traits() # No error expected
-
-def test_Rule_check_protein_object21(default_Rule_instance, default_Protein_instance):
-    dri = default_Rule_instance # For typing convenience
-
-    # Incorrect usage with 'select' selected
-    # Non-empty conf_list given, but contains invalid index numbers
-    dri.rule_object = default_Protein_instance
-    dri.object_conf = 'select'
-    dri.object_conf_list = [1, 2, 3] # Only 0 and 1 valid for default_Protein_instance
+    dri.object_conf = []
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
-
-def test_Rule_check_protein_object22(default_Rule_instance, default_Protein_instance):
+        
+def test_Rule_check_protein_object13(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Incorrect usage, None selected
-    # Valid conf_list ignored
+    # Incorrect conf list given, None is not allowed for a protein
     dri.rule_object = default_Protein_instance
     dri.object_conf = None
-    dri.object_conf_list = [0]
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 

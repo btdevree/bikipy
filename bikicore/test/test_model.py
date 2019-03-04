@@ -84,7 +84,7 @@ def test_Model_generate_network_null(default_Model_instance):
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
-# Test that the 'associates with' rule creates a valid graph 
+# Test that the 'associates with' rule creates a valid shaped graph 
 def test_Model_generate_network_Irr_association(default_Model_instance):
     dmi = default_Model_instance
     
@@ -94,7 +94,7 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     r1.subject_conf = None
     r1.rule = ' associates with '
     r1.rule_object = dmi.protein_list[0]
-    r1.object_conf = 'all'
+    r1.object_conf = [0,1]
     r1.check_rule_traits()
     
     # Attach rule to model and generate network
@@ -108,6 +108,8 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    
+    # Test that the 'associates with' rule creates a valid shaped graph 
 
 # -- Helper method tests in model.py --    
             
