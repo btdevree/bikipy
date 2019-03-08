@@ -258,11 +258,10 @@ def test_Rule_check_protein_subject7(default_Rule_instance, default_Protein_inst
 def test_Rule_check_protein_subject8(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Incorrect conf list given, empty list is not allowed
+    # Empty conf list given, empty list is allowed in rules
     dri.rule_subject = default_Protein_instance
     dri.subject_conf = []
-    with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected
+    dri.check_rule_traits() #No error expected
 
 def test_Rule_check_protein_subject9(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
@@ -293,11 +292,10 @@ def test_Rule_check_protein_object11(default_Rule_instance, default_Protein_inst
 def test_Rule_check_protein_object12(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience
 
-    # Incorrect conf list given, empty list is not allowed
+    # Empty conf list given, empty list is allowed in rules
     dri.rule_object = default_Protein_instance
     dri.object_conf = []
-    with pytest.raises(RuleNotValidError):
-        dri.check_rule_traits() # Error expected
+    dri.check_rule_traits() #No error expected
         
 def test_Rule_check_protein_object13(default_Rule_instance, default_Protein_instance):
     dri = default_Rule_instance # For typing convenience

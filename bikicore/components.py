@@ -126,8 +126,8 @@ class Rule(HasTraits):
     # Create a list of possible component choices before completeing Traits initalization
     def __init__(self, model, *args, **kwargs):
         self._components = [*model.drug_list, *model.protein_list]
-        self.add_trait('rule_subject', Enum(*self._components))
-        self.add_trait('rule_object', Enum(*self._components)) 
+        self.add_trait('rule_subject', List(Enum(*self._components)))
+        self.add_trait('rule_object', List(Enum(*self._components))) 
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
     
     # Method to check if the rule is valid
@@ -135,30 +135,35 @@ class Rule(HasTraits):
         # Checks only for generally valid configurations of components and associated configurations. 
         # Specific requirements of each individual rule type are checked in the network generation code on the Model class 
         
-        # Drugs do not have conformations
-        if isinstance(self.rule_subject, Drug):
-            if self.subject_conf != None:
-                raise RuleNotValidError('Drugs cannot have listed conformations')
-                # Drugs do not have conformations
-        if isinstance(self.rule_object, Drug):
-            if self.object_conf != None:
-                raise RuleNotValidError('Drugs cannot have listed conformations')
-                
-        # Proteins must have at least one conformation chosen and cannot choose more conformations than are available
-        if isinstance(self.rule_subject, Protein):
-            if self.subject_conf == None:
-                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.subject_conf == []:
-                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.subject_conf != None and any(index >= len(self.rule_subject.conformation_names) for index in self.subject_conf):
-                raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
-        if isinstance(self.rule_object, Protein):
-            if self.object_conf == None:
-                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.object_conf == []:
-                raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-            if self.object_conf != None and any(index >= len(self.rule_object.conformation_names) for index in self.object_conf):
-                raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
+        # Check each subject's traits
+        for current_subject, current_subject_conf in zip(self.rule_subject, self.subject_conf):
+
+            # Drugs do not have conformations
+            if isinstance(current_subject, Drug):
+                if current_subject_conf != None:
+                    raise RuleNotValidError('Drugs cannot have listed conformations')
+                        
+            # Proteins cannot choose more conformations than are available and may not have a None value
+            if isinstance(current_subject, Protein):
+                if current_subject_conf == None:
+                    raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+                if current_subject_conf != None and any(index >= len(current_subject.conformation_names) for index in current_subject):
+                    raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
+                    
+        # Check each object's traits. It occurs to me just now that this could be refactored to avoid a bit of code repeat. Low priorty.
+        for current_object, current_object_conf in zip(self.rule_object, self.object_conf):
+            
+            # Drugs do not have conformations
+            if isinstance(current_object, Drug):
+                if current_object_conf != None:
+                    raise RuleNotValidError('Drugs cannot have listed conformations')
+                    
+            # Proteins cannot choose more conformations than are available and may not have a None value          
+            if isinstance(current_object, Protein):
+                if current_object_conf == None:
+                    raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
+                if current_object_conf != None and any(index >= len(current_object.conformation_names) for index in current_object_conf):
+                    raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet

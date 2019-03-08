@@ -35,7 +35,7 @@ class Model(HasTraits):
     def generate_network(self):
         # Create a network graph of the model by using the list of rules. 
         
-        # Create a new Network object and work with main_graph for the next block
+        # Create a new Network object
         self.network = bkcc.Network()
       
         # Add singleton states to graph
@@ -55,16 +55,41 @@ class Model(HasTraits):
         # Apply each rule
         for current_rule in self.rule_list:
             
+            #Find states that fit the rule discription
+            states = [x for x in self.network.main_graph.__iter__()]
+            state1 = states[0]
+            state2 = states[1]
+            
             # Break into basic relationships
             if current_rule.rule == ' associates with ':
-                
-                #fill in states directly for now
-                states = [x for x in self.network.main_graph.__iter__()]
-                state1 = states[0]
-                state2 = states[1]
-                self._create_association(state1, state2)
+                pass
             # Make association steps
+            self._create_association(state1, state2)
+    
+    def _find_states_with_matching_components(self, rule):
+        # Helper function that looks through a graph and returns lists of subject 
+        # and object states that include a rule's  a rule. 
         
+        # Iterate through all the graph's states
+        matching_subject_states = []
+        matching_object_states = []
+        for current_state in self.network.main_graph.__iter__():
+            
+            # We will create list of lists of booleans. The inner list asks if a component in the 
+            # current state under consiteration fufills contains the 
+            
+            # Check if any drugs in the current state match
+            test1_sub = []
+            test1_obj = []
+            for current_drug in current_state.required_drug_list:
+                for current_subject in rule.rule_subject:
+                    if current_drug == current_subject:
+                        test1_sub.extend(True)
+                    else:
+                        test1_sub.extend(False)
+                        
+        return matching_subject_states, matching_object_states
+
     def _create_association(self, state1, state2):
         # Helper function to connect two states into an association relationship
         # Creates a new associated state if one cannot be found already

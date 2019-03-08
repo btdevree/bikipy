@@ -40,6 +40,25 @@ def default_Model_list():
                 bkcm.Model(2, 'Default-2', None),
                 bkcm.Model(4, 'Default-4', None)]
     return model_list
+
+# Run a lot of tests about state matching with a simple association rule
+@pytest.fixture()
+def model_for_matching_tests(default_Model_instance):
+    dmi = default_Model_instance
+    
+    # Create a new Network object without calling dmi.generate_network()
+    dmi.network = bkcc.Network()
+        
+    #Setup testing rule for drug association - "A associates with R([])"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = dmi.drug_list[0]
+    r1.subject_conf = None
+    r1.rule = ' associates with '
+    r1.rule_object = dmi.protein_list[0]
+    r1.object_conf = []
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    return dmi
     
 # ---- Unit tests ----
 
@@ -133,6 +152,59 @@ def test_modelnum_finder(default_Model_list):
     del default_Model_list[0]
     next_number = bkcm._find_next_model_number(default_Model_list)
     assert next_number == 1
+
+# If there are no states in the graph, empty lists of states should be returned
+def test1_find_states_with_matching_components(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    # Empty network, no code here
+    
+    # Run method
+    subject_list, object_list = mmt._find_states_with_matching_components(mmt.rule_list[0])
+    
+    # Check output
+    assert subject_list == []
+    assert object_list == []
+    
+# A should be returned as subject
+def test2_find_states_with_matching_components(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mmt.drug_list[0]]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = [[]]
+    mmt.network.main_graph.add_node(s1)
+    # Empty network, no code here
+    
+    # Run method
+    subject_list, object_list = mmt._find_states_with_matching_components(mmt.rule_list[0])
+    
+    # Check output
+    assert subject_list == [s1]
+    assert object_list == []
+    
+# A should be returned as subject
+def test3_find_states_with_matching_components(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = []
+    s1.required_protein_list = [mmt.protein_list[0]]
+    s1.req_protein_conf_lists = [[]]
+    mmt.network.main_graph.add_node(s1)
+    # Empty network, no code here
+    
+    # Run method
+    subject_list, object_list = mmt._find_states_with_matching_components(mmt.rule_list[0])
+    
+    # Check output
+    assert subject_list == []
+    assert object_list == [s1]
+
 
     
     
