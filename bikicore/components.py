@@ -105,8 +105,8 @@ class Rule(HasTraits):
     # object-oriented programming also shares terminology with grammar.
     
     # Traits initialization
-    subject_conf = Either(List(Int), None)
-    object_conf = Either(List(Int), None)
+    subject_conf = List(Either(List(Int), None))
+    object_conf = List(Either(List(Int), None))
     # Note: rule_subject and rule_object defined dynamically in __init__ as Enum(all listed Drug and Protein objects in the Model)
     
     # Possible rules
@@ -147,7 +147,7 @@ class Rule(HasTraits):
             if isinstance(current_subject, Protein):
                 if current_subject_conf == None:
                     raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
-                if current_subject_conf != None and any(index >= len(current_subject.conformation_names) for index in current_subject):
+                if current_subject_conf != None and any(index >= len(current_subject.conformation_names) for index in current_subject_conf):
                     raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
                     
         # Check each object's traits. It occurs to me just now that this could be refactored to avoid a bit of code repeat. Low priorty.

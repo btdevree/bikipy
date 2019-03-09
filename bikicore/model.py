@@ -75,18 +75,43 @@ class Model(HasTraits):
         matching_object_states = []
         for current_state in self.network.main_graph.__iter__():
             
-            # We will create list of lists of booleans. The inner list asks if a component in the 
-            # current state under consiteration fufills contains the 
+            # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
+            subject_tests = []
+            object_tests = []
             
-            # Check if any drugs in the current state match
-            test1_sub = []
-            test1_obj = []
-            for current_drug in current_state.required_drug_list:
-                for current_subject in rule.rule_subject:
-                    if current_drug == current_subject:
-                        test1_sub.extend(True)
+            # Look through each component that is needed for the rule subject
+            for current_subject_component, current_subject_conf in zip(rule.rule_subject, rule.subject_conf):
+            
+                # TO DO: It feels like there is probably a less complex way to do this checking.
+                
+                # Check if any drugs in the current state match
+                if isinstance(current_subject_component, bkcc.Drug):
+                    for current_drug in current_state.required_drug_list:
+                        if current_drug == current_subject_component:
+                            found_drug = True
+                            break
                     else:
-                        test1_sub.extend(False)
+                        found_drug = False # No matching states
+                else:
+                    found_drug = False # Not a drug
+                
+                # Check if any proteins in the current state match
+                if isinstance(current_subject_component, bkcc.Protein):
+                    for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
+                        if current_protein == current_subject_component:
+                            if current_conf == current_subject_conf: # Exact matching conformation
+                                found_protein = True
+                                break
+                            elif current_conf == []: # Rule allows any conformation configuration
+                                found_protein = True
+                                break
+                    else:
+                        found_protein = False # No matching states
+                else:
+                    found_protein = False # Not a protein
+                    
+            # If either type of component works for the rule requirement, record a match
+            subject_tests.append(any([found_drug, found_protein]))
                         
         return matching_subject_states, matching_object_states
 

@@ -51,11 +51,11 @@ def model_for_matching_tests(default_Model_instance):
         
     #Setup testing rule for drug association - "A associates with R([])"
     r1 = bkcc.Rule(dmi)
-    r1.rule_subject = dmi.drug_list[0]
-    r1.subject_conf = None
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
     r1.rule = ' associates with '
-    r1.rule_object = dmi.protein_list[0]
-    r1.object_conf = []
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[]]
     r1.check_rule_traits()
     dmi.rule_list = [r1]
     return dmi
@@ -109,11 +109,11 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     
     #Setup rule for simple drug association - "A associates with R"
     r1 = bkcc.Rule(dmi)
-    r1.rule_subject = dmi.drug_list[0]
-    r1.subject_conf = None
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
     r1.rule = ' associates with '
-    r1.rule_object = dmi.protein_list[0]
-    r1.object_conf = [0,1]
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[0,1]]
     r1.check_rule_traits()
     
     # Attach rule to model and generate network
