@@ -33,7 +33,7 @@ class Model(HasTraits):
         pass           
     
     def generate_network(self):
-        # Create a network graph of the model by using the list of rules. 
+        # Create a new network graph of the model by using the list of rules. 
         
         # Create a new Network object
         self.network = bkcc.Network()
@@ -52,15 +52,26 @@ class Model(HasTraits):
             new_state.req_protein_conf_lists = [list(range(len(current_component.conformation_names)))] # Allow all conformations
             self.network.main_graph.add_node(new_state)
         
-        # Apply each rule
+        # After creating the singleton graph, build the network with the given rules
+        self.apply_rules_to_network()
+        
+    def apply_rules_to_network(self, graph = None):
+        # Apply the model's rules to an existing graph
+
+        # If default, work on the main graph
+        if graph == None:
+            graph = self.network.main_graph
+        
+        # Apply each rule to the graph
         for current_rule in self.rule_list:
             
-            #Find states that fit the rule discription
+            # Find states that fit the rule discription
             matching_subject_states, matching_object_states = self._find_states_with_matching_components(current_rule)
-            #########################
+
             # Break into basic relationships
             if current_rule.rule == ' associates with ':
                 pass
+            
             # Make association steps
             self._create_association(state1, state2)
     
