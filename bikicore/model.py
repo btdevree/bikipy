@@ -56,10 +56,8 @@ class Model(HasTraits):
         for current_rule in self.rule_list:
             
             #Find states that fit the rule discription
-            states = [x for x in self.network.main_graph.__iter__()]
-            state1 = states[0]
-            state2 = states[1]
-            
+            matching_subject_states, matching_object_states = self._find_states_with_matching_components(current_rule)
+            #########################
             # Break into basic relationships
             if current_rule.rule == ' associates with ':
                 pass
@@ -68,26 +66,28 @@ class Model(HasTraits):
     
     def _find_states_with_matching_components(self, rule):
         # Helper function that looks through a graph and returns lists of subject 
-        # and object states that include a rule's  a rule. 
-        
-        # Iterate through all the graph's states
-        matching_subject_states = []
-        matching_object_states = []
-        for current_state in self.network.main_graph.__iter__():
+        # and object states that include a rule's required components
+            
+        # Look through each component that is needed for the rule
+        def state_and_rule_match(current_state, rule, what_to_search): 
+            # Nested function allows reuse for subjects and objects
+            
+            # Pick the right components for rule subjects or objects
+            if what_to_search == 'subject':
+                rule_components = rule.rule_subject
+                rule_conformations = rule.subject_conf
+            elif what_to_search == 'object':
+                rule_components = rule.rule_object
+                rule_conformations = rule.object_conf
             
             # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
-            subject_tests = []
-            object_tests = []
+            current_tests = []
+            for current_rule_component, current_rule_conf in zip(rule_components, rule_conformations):
             
-            # Look through each component that is needed for the rule subject
-            for current_subject_component, current_subject_conf in zip(rule.rule_subject, rule.subject_conf):
-            
-                # TO DO: It feels like there is probably a less complex way to do this checking.
-                
                 # Check if any drugs in the current state match
-                if isinstance(current_subject_component, bkcc.Drug):
+                if isinstance(current_rule_component, bkcc.Drug):
                     for current_drug in current_state.required_drug_list:
-                        if current_drug == current_subject_component:
+                        if current_drug == current_rule_component:
                             found_drug = True
                             break
                     else:
@@ -96,13 +96,13 @@ class Model(HasTraits):
                     found_drug = False # Not a drug
                 
                 # Check if any proteins in the current state match
-                if isinstance(current_subject_component, bkcc.Protein):
+                if isinstance(current_rule_component, bkcc.Protein):
                     for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
-                        if current_protein == current_subject_component:
-                            if current_conf == current_subject_conf: # Exact matching conformation
+                        if current_protein == current_rule_component:
+                            if current_conf == current_rule_conf: # Exact matching conformation
                                 found_protein = True
                                 break
-                            elif current_conf == []: # Rule allows any conformation configuration
+                            elif current_rule_conf == []: # Rule allows any conformation configuration
                                 found_protein = True
                                 break
                     else:
@@ -110,9 +110,22 @@ class Model(HasTraits):
                 else:
                     found_protein = False # Not a protein
                     
-            # If either type of component works for the rule requirement, record a match
-            subject_tests.append(any([found_drug, found_protein]))
-                        
+                # If either type of component works for the rule requirement, record a match
+                current_tests.append(any([found_drug, found_protein]))
+            
+            # If the state matches all the required components, return True
+            return all(current_tests)
+          
+        # Iterate through all the graph's states and add them to the lists if they match
+        matching_subject_states = []
+        matching_object_states = []
+        for current_state in self.network.main_graph.__iter__():
+            if state_and_rule_match(current_state, rule, 'subject'):
+                matching_subject_states.append(current_state)
+            if state_and_rule_match(current_state, rule, 'object'):
+                matching_object_states.append(current_state)
+            
+        # Give the lists back to the calling method
         return matching_subject_states, matching_object_states
 
     def _create_association(self, state1, state2):
