@@ -70,10 +70,15 @@ class Model(HasTraits):
 
             # Break into basic relationships
             if current_rule.rule == ' associates with ':
+                
+                # We need to count the number of components that the rule implies, or else we create unintended oligomerization
+                minimum_components = [*current_rule.rule_subject, current_rule.rule_object]
+                component_count_dict = self._count_components(minimum_components)
+                
+                self._create_association(graph, counting_dict, matching_subject_states, matching_object_states)
+                
+            elif current_rule.rule == ' dissociates_from ':
                 pass
-            
-            # Make association steps
-            self._create_association(state1, state2)
     
     def _find_states_with_matching_components(self, rule):
         # Helper function that looks through a graph and returns lists of subject 
@@ -138,15 +143,38 @@ class Model(HasTraits):
             
         # Give the lists back to the calling method
         return matching_subject_states, matching_object_states
-
-    def _create_association(self, state1, state2):
-        # Helper function to connect two states into an association relationship
-        # Creates a new associated state if one cannot be found already
+    
+    def _count_components(self, components_list):
+        # Counts the number of each component in the given list
+        # Returns a dictionary with components as keys and a count as an integer value
         
+        # Create and empty dictionary and loop through each component in the list
+        count_dict = {}
+        for component in components_list:
+            
+            # Try to get the value with the component as key
+            try:
+                number_found = count_dict[component]
+            except KeyError:
+                
+        
+        
+
+    def _create_association(self, graph, rule, subject_states, object_states):
+        # Function to connect states into an association relationships on the given graph
+        # Creates a new associated state if one cannot be found to connect
+        
+        # We need to count the number of components that the rule implies, or else we create unintended oligomerization
+        
+        
+        # Loop through each subject and object state
+        for current_sub_state in subject_states:
+            for current_obj_state in object_states:
+                
+                
         # Look for an associated state
         associated_drug_list = [*state1.required_drug_list, *state2.required_drug_list]
         associated_protein_list = [*state1.required_protein_list, *state2.required_protein_list]
-        associated_conf_list = [*state1.req_protein_conf_lists, *state2.req_protein_conf_lists]
         #DO LATER, search for a state with these components, assign to state12
         
         # Make a new associated state
