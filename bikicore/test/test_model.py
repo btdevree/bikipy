@@ -294,5 +294,21 @@ def test6_find_states_with_matching_components(model_for_matching_tests):
     assert subject_list == []
     assert object_list == [s3]
 
+# Test out the counting helper method
+def test_count_components(default_Model_instance):
+    dmi = default_Model_instance
+    
+    # Create a list of components
+    test_drug = dmi.drug_list[0]
+    test_protein = dmi.protein_list[0]
+    
+    test_list = [test_drug, test_protein, test_drug]
+    
+    # Ask the function to count the components
+    count_dict = dmi._count_components(test_list)
+    
+    # See if it returns what we expect
+    assert count_dict[test_drug] == 2
+    assert count_dict[test_protein] == 1
     
     

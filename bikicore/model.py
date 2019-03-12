@@ -72,10 +72,10 @@ class Model(HasTraits):
             if current_rule.rule == ' associates with ':
                 
                 # We need to count the number of components that the rule implies, or else we create unintended oligomerization
-                minimum_components = [*current_rule.rule_subject, current_rule.rule_object]
+                minimum_components = [*current_rule.rule_subject, *current_rule.rule_object]
                 component_count_dict = self._count_components(minimum_components)
                 
-                self._create_association(graph, counting_dict, matching_subject_states, matching_object_states)
+                self._create_association(graph, component_count_dict, matching_subject_states, matching_object_states)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -153,41 +153,42 @@ class Model(HasTraits):
         for component in components_list:
             
             # Try to get the value with the component as key
-            try:
+            try: 
                 number_found = count_dict[component]
+            # If the component is not alreay a key, add it and set the count to 1
             except KeyError:
+                count_dict[component] = 1
+            # If the component exists as a key, increment the count by one
+            else:
+                count_dict[component] = number_found + 1
                 
-        
-        
+        # Return the counting dictionary
+        return count_dict
 
-    def _create_association(self, graph, rule, subject_states, object_states):
+    def _create_association(self, graph, rule_count_dict, subject_states, object_states):
         # Function to connect states into an association relationships on the given graph
         # Creates a new associated state if one cannot be found to connect
-        
-        # We need to count the number of components that the rule implies, or else we create unintended oligomerization
-        
         
         # Loop through each subject and object state
         for current_sub_state in subject_states:
             for current_obj_state in object_states:
+                       
+                # Look for an already associated state
+                associated_drug_list = [*current_sub_state.required_drug_list, *current_obj_state.required_drug_list]
+                associated_protein_list = [*current_sub_state.required_protein_list, *current_obj_state.required_protein_list]
+                associated_protein_conf_list = [*current_sub_state.req_protein_conf_lists, *current_obj_state.req_protein_conf_lists]
+                #######################################################3
+                # Make a new associated state
+                state12 = bkcc.State()
+                state12.required_drug_list = associated_drug_list
+                state12.required_protein_list = associated_protein_list
+                state12.req_protein_conf_lists = associated_protein_conf_list
                 
+                # Connect states 
+                self.network.main_graph.add_edge(state1, state12)# (NeworkX silently adds a new node if state12 does not already exist)
+                self.network.main_graph.add_edge(state2, state12)
                 
-        # Look for an associated state
-        associated_drug_list = [*state1.required_drug_list, *state2.required_drug_list]
-        associated_protein_list = [*state1.required_protein_list, *state2.required_protein_list]
-        #DO LATER, search for a state with these components, assign to state12
-        
-        # Make a new associated state
-        state12 = bkcc.State()
-        state12.required_drug_list = associated_drug_list
-        state12.required_protein_list = associated_protein_list
-        state12.req_protein_conf_lists = associated_conf_list
-        
-        # Connect states 
-        self.network.main_graph.add_edge(state1, state12)# (NeworkX silently adds a new node if state12 does not already exist)
-        self.network.main_graph.add_edge(state2, state12)
-        
-        #new_states = [bkcc.State(x) for x in [self.drug_list, self.protein_list]]
+                #new_states = [bkcc.State(x) for x in [self.drug_list, self.protein_list]]
 
 
     
