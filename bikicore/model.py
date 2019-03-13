@@ -66,7 +66,7 @@ class Model(HasTraits):
         for current_rule in self.rule_list:
             
             # Find states that fit the rule discription
-            matching_subject_states, matching_object_states = self._find_states_with_matching_components(current_rule)
+            matching_subject_states, matching_object_states = self._find_states_that_match_rule(current_rule)
 
             # Break into basic relationships
             if current_rule.rule == ' associates with ':
@@ -80,7 +80,7 @@ class Model(HasTraits):
             elif current_rule.rule == ' dissociates_from ':
                 pass
     
-    def _find_states_with_matching_components(self, rule):
+    def _find_states_that_match_rule(self, rule):
         # Helper function that looks through a graph and returns lists of subject 
         # and object states that include a rule's required components
             
@@ -143,6 +143,45 @@ class Model(HasTraits):
             
         # Give the lists back to the calling method
         return matching_subject_states, matching_object_states
+   
+#    def _state_match_to_component_lists(self, test_state, component_list, conformation_list, match = 'exact'):
+#        # Helper function that asks if a given state contains the components given in the lists
+#        # Returns 
+#        # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
+#            current_tests = []
+#            for current_rule_component, current_rule_conf in zip(rule_components, rule_conformations):
+#            
+#                # Check if any drugs in the current state match
+#                if isinstance(current_rule_component, bkcc.Drug):
+#                    for current_drug in current_state.required_drug_list:
+#                        if current_drug == current_rule_component:
+#                            found_drug = True
+#                            break
+#                    else:
+#                        found_drug = False # No matching states
+#                else:
+#                    found_drug = False # Not a drug
+#                
+#                # Check if any proteins in the current state match
+#                if isinstance(current_rule_component, bkcc.Protein):
+#                    for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
+#                        if current_protein == current_rule_component:
+#                            if current_conf == current_rule_conf: # Exact matching conformation
+#                                found_protein = True
+#                                break
+#                            elif current_rule_conf == []: # Rule allows any conformation configuration
+#                                found_protein = True
+#                                break
+#                    else:
+#                        found_protein = False # No matching states
+#                else:
+#                    found_protein = False # Not a protein
+#                    
+#                # If either type of component works for the rule requirement, record a match
+#                current_tests.append(any([found_drug, found_protein]))
+#            
+#            # If the state matches all the required components, return True
+#            return all(current_tests)
     
     def _count_components(self, components_list):
         # Counts the number of each component in the given list
