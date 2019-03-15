@@ -144,44 +144,51 @@ class Model(HasTraits):
         # Give the lists back to the calling method
         return matching_subject_states, matching_object_states
    
-#    def _state_match_to_component_lists(self, test_state, component_list, conformation_list, match = 'exact'):
-#        # Helper function that asks if a given state contains the components given in the lists
-#        # Returns 
-#        # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
-#            current_tests = []
-#            for current_rule_component, current_rule_conf in zip(rule_components, rule_conformations):
-#            
-#                # Check if any drugs in the current state match
-#                if isinstance(current_rule_component, bkcc.Drug):
-#                    for current_drug in current_state.required_drug_list:
-#                        if current_drug == current_rule_component:
-#                            found_drug = True
-#                            break
-#                    else:
-#                        found_drug = False # No matching states
-#                else:
-#                    found_drug = False # Not a drug
-#                
-#                # Check if any proteins in the current state match
-#                if isinstance(current_rule_component, bkcc.Protein):
-#                    for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
-#                        if current_protein == current_rule_component:
-#                            if current_conf == current_rule_conf: # Exact matching conformation
-#                                found_protein = True
-#                                break
-#                            elif current_rule_conf == []: # Rule allows any conformation configuration
-#                                found_protein = True
-#                                break
-#                    else:
-#                        found_protein = False # No matching states
-#                else:
-#                    found_protein = False # Not a protein
-#                    
-#                # If either type of component works for the rule requirement, record a match
-#                current_tests.append(any([found_drug, found_protein]))
-#            
-#            # If the state matches all the required components, return True
-#            return all(current_tests)
+    def _state_match_to_component_lists(self, test_state, component_list, conformation_list, match = 'exact'):
+        # Helper function that asks if a given state contains the components given in the lists
+        # Returns True or False
+        
+        # Use modes:
+        #   match = 'exact': returns true if and only if the state contains all the required components, and no extra components
+        #   match = 'minimal': returns true if the state contains all the reqired components, but may have additional ones as well
+        
+        # Create a copy of the component and conformation lists to consume
+        remaining_components = component_list
+        remaining_conformations = conformation_list
+        
+        # Get the components and conformations that the state requires
+        state_components, state_conformations = test_state.generate_requirement_lists()
+                
+        # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
+        test_list = []
+        for current_rule_component, current_rule_conf in zip(state_components, state_conformations):
+        
+             for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
+                    if current_protein == current_rule_component:
+                        if current_conf == current_rule_conf: # Exact matching conformation
+                            found_protein = True
+                            break
+                        elif current_rule_conf == []: # Rule allows any conformation configuration
+                            found_protein = True
+                            break
+                else:
+                    found_drug = False # No matching states
+            else:
+                found_drug = False # Not a drug
+            
+            # Check if any proteins in the current state match
+            if isinstance(current_rule_component, bkcc.Protein):
+            
+                else:
+                    found_protein = False # No matching states
+            else:
+                found_protein = False # Not a protein
+                
+            # If either type of component works for the rule requirement, record a match
+            current_tests.append(any([found_drug, found_protein]))
+        
+        # If the state matches all the required components, return True
+        return all(current_tests)
     
     def _count_components(self, components_list):
         # Counts the number of each component in the given list

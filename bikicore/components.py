@@ -4,6 +4,7 @@ biochemical system, the model, and the experiments performed.
 """
 
 import uuid
+import itertools
 import networkx as nx
 import numpy as np
 from traits.api import HasTraits, Str, List, Int, Instance, Enum, Either
@@ -55,7 +56,17 @@ class State(HasTraits):
         pass
     def autoname(self):
         pass
+    
+    def generate_component_list(self):
+        # Returns a list of components and a list of conformations
+        # The list is ordered all drugs first, then proteins
         
+        # Concatenate lists of components and mark the drug conformations as None 
+        component_sorted = [*self.required_drug_list, *self.required_protein_list]
+        conformation_sorted = [itertools.repeat(None, len(self.required_drug_list)), self.req_protein_conf_lists]
+        
+        return component_sorted, conformation_sorted    
+    
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    
     #Superclass for all transition objects
@@ -164,6 +175,45 @@ class Rule(HasTraits):
                     raise RuleNotValidError('Proteins must have at least one conformation participating in rule')
                 if current_object_conf != None and any(index >= len(current_object.conformation_names) for index in current_object_conf):
                     raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
+                    
+    # Method returns the components involved in the rule as a standardized list
+    def generate_component_list(self, what_to_include = 'both'):
+        # Returns a list of components and a list of conformations
+        # The list is ordered all drugs first, then proteins with specific conformations, then proteins with any conformation allowed
+        # what_to_include = 'subject', 'object', or 'both'
+        
+        # Concatenate lists of components
+        if what_to_include == 'both':
+            component_list = [*self.rule_subject, *self.rule_object]
+            conformation_list = [*self.subject_conf, *self.object_conf]
+        elif what_to_include == 'subject':
+            component_list = self.rule_subject
+            conformation_list = self.subject_conf
+        elif what_to_include == 'object':
+            component_list = self.rule_object
+            conformation_list = self.object_conf
+        else:
+            raise ValueError("Function supplied with incorrect option for parameter 'what_to_include'")
+            
+        # Sort the list
+        # Seperate into partial lists of drugs and proteins
+        drug_comp_part = [x for x in component_list if isinstance(x, Drug)]
+        drug_conf_part = [conformation_list[i] for i, x in enumerate(component_list) if isinstance(x, Drug)]
+        protein_comp_part = [x for x in component_list if isinstance(x, Protein)]
+        protein_conf_part = [conformation_list[i] for i, x in enumerate(component_list) if isinstance(x, Protein)]
+        # Put the proteins with a '[]' conformation at the back of the list
+        put_in_back = [i for i, x in enumerate(protein_conf_part) if x == '[]']
+        protein_comp_backpart = []
+        protein_conf_backpart = []
+        put_in_back.reverse() # If we loop through the list starting from the back, we avoid re-indexing problems with pop()
+        for i in put_in_back:
+            protein_comp_backpart.append(protein_comp_part.pop(i))
+            protein_conf_backpart.append(protein_conf_part.pop(i))
+        # Add all parts back together
+        component_sorted = [*drug_comp_part, *protein_comp_part, *protein_comp_backpart]
+        conformation_sorted = [*drug_conf_part, *protein_conf_part, *protein_conf_backpart]
+        
+        return component_sorted, conformation_sorted
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet
