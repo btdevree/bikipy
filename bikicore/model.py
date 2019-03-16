@@ -64,15 +64,16 @@ class Model(HasTraits):
         
         # Apply each rule to the graph
         for current_rule in self.rule_list:
-            
-            # Find states that fit the rule discription
-            matching_subject_states, matching_object_states = self._find_states_that_match_rule(current_rule)
 
-            # Break into basic relationships
+            # Each type of rule needs a different treatment
             if current_rule.rule == ' associates with ':
                 
+                # Find states that fit the rule discription
+                matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
+                matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
+                
                 # We need to count the number of components that the rule implies, or else we create unintended oligomerization
-                minimum_components = [*current_rule.rule_subject, *current_rule.rule_object]
+                minimum_components = current_rule.generate_component_list('both')
                 component_count_dict = self._count_components(minimum_components)
                 
                 self._create_association(graph, component_count_dict, matching_subject_states, matching_object_states)
@@ -80,119 +81,72 @@ class Model(HasTraits):
             elif current_rule.rule == ' dissociates_from ':
                 pass
     
-    def _find_states_that_match_rule(self, rule):
-        # Helper function that looks through a graph and returns lists of subject 
-        # and object states that include a rule's required components
-            
-        # Look through each component that is needed for the rule
-        def state_and_rule_match(current_state, rule, what_to_search): 
-            # Nested function allows reuse for subjects and objects
-            
-            # Pick the right components for rule subjects or objects
-            if what_to_search == 'subject':
-                rule_components = rule.rule_subject
-                rule_conformations = rule.subject_conf
-            elif what_to_search == 'object':
-                rule_components = rule.rule_object
-                rule_conformations = rule.object_conf
-            
-            # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
-            current_tests = []
-            for current_rule_component, current_rule_conf in zip(rule_components, rule_conformations):
-            
-                # Check if any drugs in the current state match
-                if isinstance(current_rule_component, bkcc.Drug):
-                    for current_drug in current_state.required_drug_list:
-                        if current_drug == current_rule_component:
-                            found_drug = True
-                            break
-                    else:
-                        found_drug = False # No matching states
-                else:
-                    found_drug = False # Not a drug
-                
-                # Check if any proteins in the current state match
-                if isinstance(current_rule_component, bkcc.Protein):
-                    for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
-                        if current_protein == current_rule_component:
-                            if current_conf == current_rule_conf: # Exact matching conformation
-                                found_protein = True
-                                break
-                            elif current_rule_conf == []: # Rule allows any conformation configuration
-                                found_protein = True
-                                break
-                    else:
-                        found_protein = False # No matching states
-                else:
-                    found_protein = False # Not a protein
-                    
-                # If either type of component works for the rule requirement, record a match
-                current_tests.append(any([found_drug, found_protein]))
-            
-            # If the state matches all the required components, return True
-            return all(current_tests)
-          
+    def _find_states_that_match_rule(self, rule, what_to_search):
+        # Helper function that looks through a graph and returns lists states that include a rule's required components
+        # what_to_search = 'subject', 'object', or 'both'
+        
+        # Get the components and conformations that we are looking for
+        # Note that any proteins with a [] conformation will always be last in the list
+        rule_components, rule_conformations = rule.generate_component_list(what_to_search)
+        
         # Iterate through all the graph's states and add them to the lists if they match
-        matching_subject_states = []
-        matching_object_states = []
+        matching_states = []
         for current_state in self.network.main_graph.__iter__():
-            if state_and_rule_match(current_state, rule, 'subject'):
-                matching_subject_states.append(current_state)
-            if state_and_rule_match(current_state, rule, 'object'):
-                matching_object_states.append(current_state)
-            
-        # Give the lists back to the calling method
-        return matching_subject_states, matching_object_states
+            if _state_match_to_component_lists(current_state, rule_components, rule_conformations, 'minimal'):
+                matching_states.append(current_state)
+
+        # Give the list back to the calling method
+        return matching_states
    
-    def _state_match_to_component_lists(self, test_state, component_list, conformation_list, match = 'exact'):
-        # Helper function that asks if a given state contains the components given in the lists
+    def _state_match_to_component_lists(self, query_state, reference_component_list, reference_conformation_list, match = 'exact'):
+        # Helper function that asks if a given query state contains the components given in the reference lists
         # Returns True or False
         
         # Use modes:
-        #   match = 'exact': returns true if and only if the state contains all the required components, and no extra components
-        #   match = 'minimal': returns true if the state contains all the reqired components, but may have additional ones as well
+        #   match = 'exact': returns true if and only if the query state contains all the reference components, and no extra components
+        #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well
         
         # Create a copy of the component and conformation lists to consume
-        remaining_components = component_list
-        remaining_conformations = conformation_list
+        remaining_components = reference_component_list.copy()
+        remaining_conformations = reference_conformation_list.copy()
         
         # Get the components and conformations that the state requires
-        state_components, state_conformations = test_state.generate_requirement_lists()
+        query_components, query_conformations = query_state.generate_requirement_lists()
+
+        # Loop through all remaining reference components for each query component
+        for current_query_comp, current_query_conf in zip(query_components, query_conformations): 
+            for i, (current_ref_comp, current_ref_conf) in enumerate(zip(remaining_components, remaining_conformations)):
                 
-        # We will create list of list of booleans that ask if a component in the current state under consiteration fufills contains the 
-        test_list = []
-        for current_rule_component, current_rule_conf in zip(state_components, state_conformations):
-        
-             for current_protein, current_conf in zip(current_state.required_protein_list, current_state.req_protein_conf_lists):
-                    if current_protein == current_rule_component:
-                        if current_conf == current_rule_conf: # Exact matching conformation
-                            found_protein = True
-                            break
-                        elif current_rule_conf == []: # Rule allows any conformation configuration
-                            found_protein = True
-                            break
-                else:
-                    found_drug = False # No matching states
-            else:
-                found_drug = False # Not a drug
+                # Ask if the query and reference match
+                # If there are exact conformation matches, they will be consumed first before [] conformations
+                if current_query_comp == current_ref_comp and (current_query_conf == current_ref_conf or current_ref_conf == []):
+                    #Consume the reference match
+                    del remaining_components[i]
+                    del remaining_conformations[i]
+                    break
             
-            # Check if any proteins in the current state match
-            if isinstance(current_rule_component, bkcc.Protein):
-            
-                else:
-                    found_protein = False # No matching states
-            else:
-                found_protein = False # Not a protein
-                
-            # If either type of component works for the rule requirement, record a match
-            current_tests.append(any([found_drug, found_protein]))
+            # If we arrive here, there was not a matching reference component/conformation for a query component/conformation
+            return False # Short-circut answer
         
-        # If the state matches all the required components, return True
-        return all(current_tests)
+        # If we arrive here, all query components/conformations were found
+        # If mode is 'minimal', this means there's a match
+        if match == 'minimal':
+            return True
+        # Otherwise, we need to make sure we completely consumed the reference lists
+        elif match == 'exact':
+            if remaining_components == [] and remaining_conformations == []:
+                return True
+            else:
+                return False
+        # No other match modes supported, raise error
+        else:
+            raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
     
     def _count_components(self, components_list):
         # Counts the number of each component in the given list
         # Returns a dictionary with components as keys and a count as an integer value
+        
+        # NOTE: I think this can also be done with Python's collections.counter.
         
         # Create and empty dictionary and loop through each component in the list
         count_dict = {}

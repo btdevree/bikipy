@@ -64,6 +64,22 @@ def default_Model_instance(default_Drug_instance, default_Protein_instance):
     newmodel.protein_list.append(default_Protein_instance)
     return newmodel
 
+# Create a default model with configured Rule object for reuse in tests
+@pytest.fixture()
+def default_Model_irreversable_association(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup testing rule for drug association - "A associates with R([])"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
+    r1.rule = ' associates with '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[]]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    return dmi
+
 # Create a default Rule object for reuse in tests
 @pytest.fixture()
 def default_Rule_instance(default_Model_instance):
@@ -78,7 +94,6 @@ def default_Network_instance():
 @pytest.fixture()
 def default_State_instance():
     return bkcc.State()
-
 
 # ---- Unit tests ----
 
@@ -128,6 +143,22 @@ def test_State_has_req_protein_list(default_State_instance):
 def test_State_has_req_protein_conf_list(default_State_instance):
     assert hasattr(default_State_instance, 'req_protein_conf_lists')
 
+def test_generate_component_list_state(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance
+    
+    # Create a state
+    dsi.required_drug_list = [ddi, ddi]
+    dsi.required_protein_list = [dpi, dpi]
+    dsi.req_protein_conf_lists = [[0], [0,1]]
+    
+    # Compare the returned list to the expected one
+    expected_components = [ddi, ddi, dpi, dpi]
+    expected_conformations = [None, None, [0], [0,1]]
+    returned_components, returned_conformations = dsi.generate_component_list()
+    assert returned_components == expected_components
+    assert returned_conformations == expected_conformations
 
 # --Tests for ConformationalChange objects--
 
@@ -305,6 +336,30 @@ def test_Rule_check_protein_object13(default_Rule_instance, default_Protein_inst
     dri.object_conf = [None]
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
+
+# Test if the generate_component_list gives back a correctly ordered list
+def test_generate_component_list_rule(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_association
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance
+    r1 = dmi.rule_list[0]
+    
+    # Already have A associates with R([]), add some extra, out of order stuff to the rule that needs to be sorted
+    r1.rule_subject.insert(0, dpi)
+    r1.subject_conf.insert(0, [])
+    r1.rule_object.insert(0, ddi)
+    r1.object_conf.insert(0, None)
+    r1.rule_object.append(dpi)
+    r1.object_conf.append([1])
+    r1.check_rule_traits() # Double check that the changes still create a valid rule
+    
+    # Compare the returned list to the expected one
+    # R([])A associates with AR([])R(1) should be returned as a list AAR(1)R([])R([])
+    expected_components = [ddi, ddi, dpi, dpi, dpi]
+    expected_conformations = [None, None, [1], [], []]
+    returned_components, returned_conformations = r1.generate_component_list()
+    assert returned_components == expected_components
+    assert returned_conformations == expected_conformations
 
 # --Tests for Network objects--
 

@@ -6,7 +6,6 @@ biochemical system, the model, and the experiments performed.
 import uuid
 import itertools
 import networkx as nx
-import numpy as np
 from traits.api import HasTraits, Str, List, Int, Instance, Enum, Either
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
@@ -63,7 +62,7 @@ class State(HasTraits):
         
         # Concatenate lists of components and mark the drug conformations as None 
         component_sorted = [*self.required_drug_list, *self.required_protein_list]
-        conformation_sorted = [itertools.repeat(None, len(self.required_drug_list)), self.req_protein_conf_lists]
+        conformation_sorted = [*itertools.repeat(None, len(self.required_drug_list)), *self.req_protein_conf_lists]
         
         return component_sorted, conformation_sorted    
     
@@ -201,18 +200,19 @@ class Rule(HasTraits):
         drug_conf_part = [conformation_list[i] for i, x in enumerate(component_list) if isinstance(x, Drug)]
         protein_comp_part = [x for x in component_list if isinstance(x, Protein)]
         protein_conf_part = [conformation_list[i] for i, x in enumerate(component_list) if isinstance(x, Protein)]
-        # Put the proteins with a '[]' conformation at the back of the list
-        put_in_back = [i for i, x in enumerate(protein_conf_part) if x == '[]']
+        
+        # Put the proteins with a [] conformation at the back of the list
+        put_in_back = [i for i, x in enumerate(protein_conf_part) if x == []]
         protein_comp_backpart = []
         protein_conf_backpart = []
         put_in_back.reverse() # If we loop through the list starting from the back, we avoid re-indexing problems with pop()
         for i in put_in_back:
             protein_comp_backpart.append(protein_comp_part.pop(i))
             protein_conf_backpart.append(protein_conf_part.pop(i))
-        # Add all parts back together
+        
+        # Add all parts back together and return
         component_sorted = [*drug_comp_part, *protein_comp_part, *protein_comp_backpart]
         conformation_sorted = [*drug_conf_part, *protein_conf_part, *protein_conf_backpart]
-        
         return component_sorted, conformation_sorted
 
 # Define class as a container for the network graphs of states
