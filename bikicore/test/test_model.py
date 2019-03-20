@@ -2,6 +2,7 @@
 
 """
 import pytest
+import collections
 import networkx as nx
 import bikipy.bikicore.model as bkcm
 import bikipy.bikicore.components as bkcc
@@ -154,39 +155,41 @@ def test_modelnum_finder(default_Model_list):
     assert next_number == 1
 
 # If there are no states in the graph, empty lists of states should be returned
-def test1_find_states_with_matching_components(model_for_matching_tests):
+def test1_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
     # Empty network, no code here
     
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output
     assert subject_list == []
     assert object_list == []
     
 # A should be returned as subject
-def test2_find_states_with_matching_components(model_for_matching_tests):
+def test2_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
     s1 = bkcc.State()
     s1.required_drug_list = [mmt.drug_list[0]]
     s1.required_protein_list = []
-    s1.req_protein_conf_lists = [[]]
+    s1.req_protein_conf_lists = []
     mmt.network.main_graph.add_node(s1)
     
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output
     assert subject_list == [s1]
     assert object_list == []
     
 # R should be returned as object
-def test3_find_states_with_matching_components(model_for_matching_tests):
+def test3_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
@@ -197,21 +200,22 @@ def test3_find_states_with_matching_components(model_for_matching_tests):
     mmt.network.main_graph.add_node(s1)
     
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output
     assert subject_list == []
     assert object_list == [s1]
     
 # Both and R and A should be returned
-def test4_find_states_with_matching_components(model_for_matching_tests):
+def test4_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
     s1 = bkcc.State()
     s1.required_drug_list = [mmt.drug_list[0]]
     s1.required_protein_list = []
-    s1.req_protein_conf_lists = [[]]
+    s1.req_protein_conf_lists = []
     mmt.network.main_graph.add_node(s1)
 
     s2 = bkcc.State()
@@ -220,22 +224,23 @@ def test4_find_states_with_matching_components(model_for_matching_tests):
     s2.req_protein_conf_lists = [[]]
     mmt.network.main_graph.add_node(s2)
     
-    # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+   # Run method
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output
     assert subject_list == [s1]
     assert object_list == [s2]
 
 # If the graph is already associated, R and A should be returned as object and subject, respectivly, plus the complex returned for both
-def test5_find_states_with_matching_components(model_for_matching_tests):
+def test5_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
     s1 = bkcc.State()
     s1.required_drug_list = [mmt.drug_list[0]]
     s1.required_protein_list = []
-    s1.req_protein_conf_lists = [[]]
+    s1.req_protein_conf_lists = []
     mmt.network.main_graph.add_node(s1)
     
     s2 = bkcc.State()
@@ -249,16 +254,21 @@ def test5_find_states_with_matching_components(model_for_matching_tests):
     s3.required_protein_list = [mmt.protein_list[0]]
     s3.req_protein_conf_lists = [[]]
     mmt.network.main_graph.add_node(s3)
-      
+    
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
+    
+    
     
     # Check output - Note that we do not care about the order of the lists
-    assert set(subject_list) == set([s1, s3])
-    assert set(object_list) == set([s2, s3])
+    assert collections.Counter(subject_list) == collections.Counter([s1, s3])
+    assert collections.Counter(object_list) == collections.Counter([s2, s3])
+#    assert subject_list.sort() == [s1, s3].sort()
+#    assert object_list.sort() == [s2, s3].sort()
 
 # R(0, 1) should be returned as object
-def test6_find_states_with_matching_components(model_for_matching_tests):
+def test6_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
@@ -286,14 +296,15 @@ def test6_find_states_with_matching_components(model_for_matching_tests):
     mmt.rule_list[0].object_conf = [[0,1]]
     
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output
     assert subject_list == []
     assert object_list == [s3]
     
 # R should not be returned as matching a dimer in the rule
-def test7_find_states_with_matching_components(model_for_matching_tests):
+def test7_find_states_that_match_rule(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
@@ -306,8 +317,13 @@ def test7_find_states_with_matching_components(model_for_matching_tests):
     # Edit rule to associate A with RR
     mmt.rule_list[0].rule_object = [mmt.protein_list[0], mmt.protein_list[0]]
     mmt.rule_list[0].object_conf = [[], []]
+    
+    print(mmt.rule_list[0].rule_object)
+    print(mmt.rule_list[0].generate_component_list('subject'))
+    print(mmt.rule_list[0].generate_component_list('object'))
     # Run method
-    subject_list, object_list = mmt._find_states_that_match_rule(mmt.rule_list[0])
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
     # Check output, no states should be found
     assert subject_list == []
@@ -329,5 +345,7 @@ def test_count_components(default_Model_instance):
     # See if it returns what we expect
     assert count_dict[test_drug] == 2
     assert count_dict[test_protein] == 1
-    
+
+pytest.main('test_model.py::test5_find_states_that_match_rule')
+
     

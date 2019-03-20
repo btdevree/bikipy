@@ -104,6 +104,8 @@ def test_Drug_has_name(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'name')
 def test_Drug_has_symbol(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'symbol')
+def test_Drug_has_ID(default_Drug_instance):
+    assert hasattr(default_Drug_instance, 'ID')
     
 # --Tests for Protein objects--
 
@@ -112,6 +114,8 @@ def test_Protein_has_name(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'name')
 def test_Protein_has_symbol(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'symbol')
+def test_Protein_has_ID(default_Protein_instance):
+    assert hasattr(default_Protein_instance, 'ID')
 def test_Protein_has_conformation_names(default_Protein_instance):
     assert hasattr(default_Protein_instance, 'conformation_names')
 def test_Protein_has_conformation_symbols(default_Protein_instance):

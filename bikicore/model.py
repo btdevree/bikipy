@@ -81,18 +81,18 @@ class Model(HasTraits):
             elif current_rule.rule == ' dissociates_from ':
                 pass
     
-    def _find_states_that_match_rule(self, rule, what_to_search):
+    def _find_states_that_match_rule(self, rule, what_to_find):
         # Helper function that looks through a graph and returns lists states that include a rule's required components
-        # what_to_search = 'subject', 'object', or 'both'
+        # what_to_find = 'subject', 'object', or 'both'
         
         # Get the components and conformations that we are looking for
         # Note that any proteins with a [] conformation will always be last in the list
-        rule_components, rule_conformations = rule.generate_component_list(what_to_search)
+        rule_components, rule_conformations = rule.generate_component_list(what_to_find)
         
         # Iterate through all the graph's states and add them to the lists if they match
         matching_states = []
         for current_state in self.network.main_graph.__iter__():
-            if _state_match_to_component_lists(current_state, rule_components, rule_conformations, 'minimal'):
+            if self._state_match_to_component_lists(current_state, rule_components, rule_conformations, 'minimal'):
                 matching_states.append(current_state)
 
         # Give the list back to the calling method
@@ -107,28 +107,32 @@ class Model(HasTraits):
         #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well
         
         # Create a copy of the component and conformation lists to consume
-        remaining_components = reference_component_list.copy()
-        remaining_conformations = reference_conformation_list.copy()
+#        print('in state match:', reference_component_list, reference_conformation_list)
+#        remaining_components, = reference_component_list.copy()
+#        remaining_conformations = reference_conformation_list.copy()
+#        print('start copys:', remaining_components, remaining_conformations)
         
         # Get the components and conformations that the state requires
-        query_components, query_conformations = query_state.generate_requirement_lists()
+        remaining_components, remaining_conformations = query_state.generate_component_list()
 
         # Loop through all remaining reference components for each query component
-        for current_query_comp, current_query_conf in zip(query_components, query_conformations): 
-            for i, (current_ref_comp, current_ref_conf) in enumerate(zip(remaining_components, remaining_conformations)):
+        for current_ref_comp, current_ref_conf in zip(reference_component_list, reference_conformation_list): 
+            for i, (current_query_comp, current_query_conf) in enumerate(zip(remaining_components, remaining_conformations)):
                 
                 # Ask if the query and reference match
                 # If there are exact conformation matches, they will be consumed first before [] conformations
                 if current_query_comp == current_ref_comp and (current_query_conf == current_ref_conf or current_ref_conf == []):
+                    
                     #Consume the reference match
                     del remaining_components[i]
                     del remaining_conformations[i]
-                    break
+                    break 
             
-            # If we arrive here, there was not a matching reference component/conformation for a query component/conformation
-            return False # Short-circut answer
-        
-        # If we arrive here, all query components/conformations were found
+            else: #no break
+                # If we arrive here, there was not a matching query component/conformation for a reference component/conformation
+                return False # Short-circut answer
+            
+        # If we arrive here, matches for all query and references components/conformations were found
         # If mode is 'minimal', this means there's a match
         if match == 'minimal':
             return True
@@ -141,7 +145,7 @@ class Model(HasTraits):
         # No other match modes supported, raise error
         else:
             raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
-    
+
     def _count_components(self, components_list):
         # Counts the number of each component in the given list
         # Returns a dictionary with components as keys and a count as an integer value
