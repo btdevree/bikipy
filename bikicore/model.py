@@ -2,6 +2,7 @@
 """
 
 import uuid
+from collections import Counter
 import bikipy.bikicore.components as bkcc
 from traits.api import HasTraits, Int, Str, Instance, This, List
 
@@ -66,17 +67,20 @@ class Model(HasTraits):
         for current_rule in self.rule_list:
 
             # Each type of rule needs a different treatment
+            
+            # Irreversable association
             if current_rule.rule == ' associates with ':
                 
                 # Find states that fit the rule discription
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
-                # We need to count the number of components that the rule implies, or else we create unintended oligomerization
-                minimum_components = current_rule.generate_component_list('both')
-                component_count_dict = self._count_components(minimum_components)
-                
-                self._create_association(graph, component_count_dict, matching_subject_states, matching_object_states)
+                # We need to count the number of components that the rule implies, or else we create unintended (de)oligomerization
+                minimum_components, minimum_conformations = current_rule.generate_component_list('both')
+                component_counter = Counter(minimum_components)
+
+                # Associate any valid associated states between the matching subject and object states by calling the basic association helper method
+                self._create_association(graph, component_counter, matching_subject_states, matching_object_states)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -101,16 +105,9 @@ class Model(HasTraits):
     def _state_match_to_component_lists(self, query_state, reference_component_list, reference_conformation_list, match = 'exact'):
         # Helper function that asks if a given query state contains the components given in the reference lists
         # Returns True or False
-        
         # Use modes:
         #   match = 'exact': returns true if and only if the query state contains all the reference components, and no extra components
         #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well
-        
-        # Create a copy of the component and conformation lists to consume
-#        print('in state match:', reference_component_list, reference_conformation_list)
-#        remaining_components, = reference_component_list.copy()
-#        remaining_conformations = reference_conformation_list.copy()
-#        print('start copys:', remaining_components, remaining_conformations)
         
         # Get the components and conformations that the state requires
         remaining_components, remaining_conformations = query_state.generate_component_list()
@@ -169,7 +166,7 @@ class Model(HasTraits):
         # Return the counting dictionary
         return count_dict
 
-    def _create_association(self, graph, rule_count_dict, subject_states, object_states):
+    def _create_association(self, graph, associated_counter, subject_states, object_states):
         # Function to connect states into an association relationships on the given graph
         # Creates a new associated state if one cannot be found to connect
         
@@ -177,10 +174,18 @@ class Model(HasTraits):
         for current_sub_state in subject_states:
             for current_obj_state in object_states:
                        
-                # Look for an already associated state
-                associated_drug_list = [*current_sub_state.required_drug_list, *current_obj_state.required_drug_list]
-                associated_protein_list = [*current_sub_state.required_protein_list, *current_obj_state.required_protein_list]
-                associated_protein_conf_list = [*current_sub_state.req_protein_conf_lists, *current_obj_state.req_protein_conf_lists]
+                # Create sorted lists of components/conformations for a possible associated state
+                sub_comp, sub_conf = current_sub_state.generate_component_list()
+                obj_comp, obj_conf = current_obj_state.generate_component_list()
+                associated_component_list = [*sub_comp, *obj_comp].sort()
+                associated_conformation_list = [*sub_conf, *obj_conf].sort()
+                
+                # See if this possible state already exists in the graph
+                for current_state in graph.__iter__():
+                    if associated_drug_list == None:
+                        pass
+                    raise
+                
                 #######################################################3
                 # Make a new associated state
                 state12 = bkcc.State()

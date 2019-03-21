@@ -259,13 +259,9 @@ def test5_find_states_that_match_rule(model_for_matching_tests):
     subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
     object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
     
-    
-    
     # Check output - Note that we do not care about the order of the lists
     assert collections.Counter(subject_list) == collections.Counter([s1, s3])
     assert collections.Counter(object_list) == collections.Counter([s2, s3])
-#    assert subject_list.sort() == [s1, s3].sort()
-#    assert object_list.sort() == [s2, s3].sort()
 
 # R(0, 1) should be returned as object
 def test6_find_states_that_match_rule(model_for_matching_tests):
@@ -318,9 +314,6 @@ def test7_find_states_that_match_rule(model_for_matching_tests):
     mmt.rule_list[0].rule_object = [mmt.protein_list[0], mmt.protein_list[0]]
     mmt.rule_list[0].object_conf = [[], []]
     
-    print(mmt.rule_list[0].rule_object)
-    print(mmt.rule_list[0].generate_component_list('subject'))
-    print(mmt.rule_list[0].generate_component_list('object'))
     # Run method
     subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
     object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
