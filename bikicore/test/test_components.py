@@ -345,7 +345,7 @@ def test_Rule_check_protein_object13(default_Rule_instance, default_Protein_inst
 def test_generate_component_list_rule(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_irreversable_association
     dpi = default_Protein_instance
-    ddi = default_Drug_instance
+    ddi = default_Drug_instance # For typing convenience
     r1 = dmi.rule_list[0]
     
     # Already have A associates with R([]), add some extra, out of order stuff to the rule that needs to be sorted
@@ -364,6 +364,23 @@ def test_generate_component_list_rule(default_Model_irreversable_association, de
     returned_components, returned_conformations = r1.generate_component_list()
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
+
+def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some lists of components/conformations
+    test_comp = [ddi, dpi, ddi]
+    test_conf = [[None], [0,1], [None]]
+    
+    # Ask the state to add these
+    dsi.add_component_list(test_comp, test_conf)
+    
+    # The lists should be added to the state
+    assert dsi.required_drug_list == [ddi, ddi]
+    assert dsi.required_protein_list == [dpi]
+    assert dsi.req_protein_conf_lists == [[0,1]]
 
 # --Tests for Network objects--
 

@@ -3,6 +3,7 @@
 
 import uuid
 from collections import Counter
+import networkx as nx
 import bikipy.bikicore.components as bkcc
 from traits.api import HasTraits, Int, Str, Instance, This, List
 
@@ -177,30 +178,25 @@ class Model(HasTraits):
                 # Create sorted lists of components/conformations for a possible associated state
                 sub_comp, sub_conf = current_sub_state.generate_component_list()
                 obj_comp, obj_conf = current_obj_state.generate_component_list()
-                associated_component_list = [*sub_comp, *obj_comp].sort()
-                associated_conformation_list = [*sub_conf, *obj_conf].sort()
+                associated_component_list = [*sub_comp, *obj_comp]
+                associated_conformation_list = [*sub_conf, *obj_conf]
                 
                 # See if this possible state already exists in the graph
                 for current_state in graph.__iter__():
-                    if associated_drug_list == None:
-                        pass
-                    raise
+                    if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, match = 'exact'):
+                        # If the state already exists, use it
+                        associated_state = current_state
+                        break
                 
-                #######################################################3
-                # Make a new associated state
-                state12 = bkcc.State()
-                state12.required_drug_list = associated_drug_list
-                state12.required_protein_list = associated_protein_list
-                state12.req_protein_conf_lists = associated_protein_conf_list
-                
-                # Connect states 
-                self.network.main_graph.add_edge(state1, state12)# (NeworkX silently adds a new node if state12 does not already exist)
-                self.network.main_graph.add_edge(state2, state12)
-                
-                #new_states = [bkcc.State(x) for x in [self.drug_list, self.protein_list]]
-
-
-    
+                # If no valid associated state alreay exists, create a new one
+                else: # no break
+                    associated_state = bkcc.State()
+                    associated_state.add_component_list(associated_component_list, associated_conformation_list)
+                    
+                # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
+                graph.add_edge(current_sub_state, associated_state)
+                graph.add_edge(current_obj_state, associated_state)
+                    
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)

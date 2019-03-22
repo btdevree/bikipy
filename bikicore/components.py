@@ -63,8 +63,15 @@ class State(HasTraits):
         # Concatenate lists of components and mark the drug conformations as None 
         component_sorted = [*self.required_drug_list, *self.required_protein_list]
         conformation_sorted = [*itertools.repeat(None, len(self.required_drug_list)), *self.req_protein_conf_lists]
-        
-        return component_sorted, conformation_sorted    
+        return component_sorted, conformation_sorted
+     
+    def add_component_list(self, incoming_components, incoming_conformations):
+        # Adds component and conformation lists to the state
+         
+        # Seperate into lists of drugs and proteins
+        self.required_drug_list.extend([x for x in incoming_components if isinstance(x, Drug)])
+        self.required_protein_list.extend([x for x in incoming_components if isinstance(x, Protein)])
+        self.req_protein_conf_lists.extend([incoming_conformations[i] for i, x in enumerate(incoming_components) if isinstance(x, Protein)])
     
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    
