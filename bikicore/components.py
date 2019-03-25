@@ -6,6 +6,7 @@ biochemical system, the model, and the experiments performed.
 import uuid
 import itertools
 import networkx as nx
+from collections import Counter
 from traits.api import HasTraits, Str, List, Int, Instance, Enum, Either
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
@@ -238,5 +239,39 @@ class Network(HasTraits):
         self.main_graph = nx.DiGraph()
         self.display_graphs = []
         self.solving_graphs = []
+        
+class CountingSignature(HasTraits):
+    # Used for storing information about the number of elements involved in state to state transistion reactions
+    # Two use modes with 1st parameter "count_type":
+        # 'components only' - Don't look at conformations of proteins at all
+        # 'conformations included' - Count using (component, conformations) tuples
+    
+    # Traits initialization
+    count_type = Either('components only', 'conformations included')
+    subject_count = Instance(Counter)
+    object_count = Instance(Counter)
+    third_state_count = Instance(Counter)
+    
+    # Can be created with any number of missing state or rule information
+    def __init__(self, count_type, subject_state = None, object_state = None, third_state = None, *args, **kwargs):
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
+        if subject_state != None:
+            self.subject_count = self._count_state(subject_state, count_type)
+        if object_state != None:
+            self.object_count = self._count_state(object_state, count_type)
+        if third_state != None:
+            self.third_state_count = self._count_state(third_state, count_type)
+        
+    def _count_state(self, state, count_type):
+        # Use the counter directly on the list of components 
+        if count_type == 'components only':
+            components, conformations = state.generate_component_list()
+            return Counter(components)
+       
+        # Use the counter on a zipped list of component, conformations) tuples 
+        elif count_type == 'conformations included':
+            components, conformations = state.generate_component_list()
+            return Counter(zip(components, conformations))
+        
         
     

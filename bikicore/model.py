@@ -2,10 +2,11 @@
 """
 
 import uuid
-from collections import Counter
 import networkx as nx
 import bikipy.bikicore.components as bkcc
+from collections import Counter
 from traits.api import HasTraits, Int, Str, Instance, This, List
+
 
 # Model class
 class Model(HasTraits):
@@ -76,10 +77,16 @@ class Model(HasTraits):
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
-                # We need to count the number of components that the rule implies, or else we create unintended (de)oligomerization
+                # We need to count the number of components that the rule implies, or else we create unintended oligomerization
+                subject_components, subject_conformations = current_rule.generate_component_list('subject')
+                object_components, object_conformations = current_rule.generate_component_list('object')
                 minimum_components, minimum_conformations = current_rule.generate_component_list('both')
-                component_counter = Counter(minimum_components)
-
+                subject_counter = Counter(subject_components)
+                object_counter = Counter(object_components)
+                associated_counter = Counter(minimum_components)
+                subject_difference = associated_counter - subject_counter
+                object_difference = associated_counter - object_counter
+                
                 # Associate any valid associated states between the matching subject and object states by calling the basic association helper method
                 self._create_association(graph, component_counter, matching_subject_states, matching_object_states)
                 
@@ -168,8 +175,9 @@ class Model(HasTraits):
         return count_dict
 
     def _create_association(self, graph, associated_counter, subject_states, object_states):
-        # Function to connect states into an association relationships on the given graph
-        # Creates a new associated state if one cannot be found to connect
+        # Function to connect lists of states into an association relationships on the given graph
+        # Makes all valid combinations of the subject and object states
+        # Creates a new associated state if one cannot be found in existing graph
         
         # Loop through each subject and object state
         for current_sub_state in subject_states:

@@ -6,7 +6,7 @@ import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
-#---- Testing fixtures ----
+#---------------------------- Testing fixtures --------------------------------
 
 # Create a default Drug object for reuse in tests
 @pytest.fixture()
@@ -95,9 +95,14 @@ def default_Network_instance():
 def default_State_instance():
     return bkcc.State()
 
-# ---- Unit tests ----
+# Create a default CountingSignature object for reuse in tests
+@pytest.fixture()
+def default_CountingSignature_instance():
+    return bkcc.CountingSignature('components only')
 
-# --Tests for Drug objects--
+# ------------------------------ Unit tests -----------------------------------
+
+# ------Tests for Drug objects------
 
 # Test if Drug objects have the required properties
 def test_Drug_has_name(default_Drug_instance):
@@ -107,7 +112,7 @@ def test_Drug_has_symbol(default_Drug_instance):
 def test_Drug_has_ID(default_Drug_instance):
     assert hasattr(default_Drug_instance, 'ID')
     
-# --Tests for Protein objects--
+# -------Tests for Protein objects-------
 
 # Test if Protein objects have the required properties
 def test_Protein_has_name(default_Protein_instance):
@@ -131,7 +136,7 @@ def test_Protein_wrong_number_conformation_names(default_Protein_instance):
     with pytest.raises(ComponentNotValidError):
         default_Protein_instance.check_protein_traits() # Error expected
 
-# --Tests for State objects--
+# -------Tests for State objects-------
 
 # Test if State objects have the required properties
 def test_State_has_name(default_State_instance):
@@ -164,7 +169,7 @@ def test_generate_component_list_state(default_State_instance, default_Protein_i
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
 
-# --Tests for ConformationalChange objects--
+# -------Tests for ConformationalChange objects-------
 
 # Test if ConformationalChange objects have the required properties
 def test_ConfChange_has_name(default_ConfChange_instance):
@@ -214,7 +219,7 @@ def test_RE_Dissociation_has_number(default_RE_Dissociation_instance):
 def test_RE_Dissociation_has_ID(default_RE_Dissociation_instance):
     assert hasattr(default_RE_Dissociation_instance, 'ID')       
     
-# --Tests for Rule objects--
+# ------Tests for Rule objects------
 
 #Test if Rule objects have the required properties
 def test_Rule_has_subject(default_Rule_instance):
@@ -365,6 +370,7 @@ def test_generate_component_list_rule(default_Model_irreversable_association, de
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
 
+# Test if the add_component_list adds a list of components/conformations successfully to a state
 def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):
     dsi = default_State_instance
     dpi = default_Protein_instance
@@ -382,10 +388,52 @@ def test_add_component_list(default_State_instance, default_Protein_instance, de
     assert dsi.required_protein_list == [dpi]
     assert dsi.req_protein_conf_lists == [[0,1]]
 
-# --Tests for Network objects--
+# ------Tests for Network objects------
 
 #Test if Network objects have the required properties
 def test_Network_has_main_graph(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph')
-     
+    
+# ------Tests for CountingSignature objects------
+
+#Test if CountingSignature objects have the required properties
+def test_CountingSignature_has_count_type(default_CountingSignature_instance):
+    assert hasattr(default_CountingSignature_instance, 'count_type')
+def test_CountingSignature_has_subject_count(default_CountingSignature_instance):
+    assert hasattr(default_CountingSignature_instance, 'subject_count')
+def test_CountingSignature_has_object_count(default_CountingSignature_instance):
+    assert hasattr(default_CountingSignature_instance, 'object_count')
+def test_CountingSignature_has_third_state_count(default_CountingSignature_instance):
+    assert hasattr(default_CountingSignature_instance, 'third_state_count')
+    
+# Test if we get the intended collections.Counter dictionaries when we create CountingSignatures 
+def test_CountingSignature_components(default_Protein_instance, default_Drug_instance):
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a few states A + R(0,1) --> AR(0,1)
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State()
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0,1]]
+    
+    s3 = bkcc.State()
+    s3.required_drug_list = [ddi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[0,1]]
+    
+    # Create a signature from the states
+    test_signature = bkcc.CountingSignature('components only', s1, s2, s3)
+    
+    # Check if we got the expected result
+    assert test_signature.subject_count[ddi] == 1
+    assert test_signature.subject_count[dpi] == 0
+    assert test_signature.object_count[ddi] == 0
+    assert test_signature.object_count[dpi] == 1
+    assert test_signature.third_state_count[ddi] == 1
+    assert test_signature.third_state_count[dpi] == 1
+
+    
 #continue with writing tests.....

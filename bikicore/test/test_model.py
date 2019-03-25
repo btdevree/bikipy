@@ -129,8 +129,42 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
-    # Test that the 'associates with' rule creates a valid shaped graph 
-
+# Test that the 'associates with' rule creates a valid shaped graph without unwanted dimerization
+def test_Model_generate_network_Irr_association_dimers(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mmt.drug_list[0]]
+    s1.required_protein_list = [mmt.protein_list[0]]
+    s1.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s1)
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s2)
+    
+    # Run method
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
+    
+    # Check output to double-check that the states match as intended
+    assert subject_list == [s1]
+    assert object_list == [s1, s2]
+    
+    # Apply the existing association rule - "A associates with R"
+    mmt.apply_rules_to_network()
+    
+    # Create comparision graph shape
+    # We should not allow AR to associate with R to make ARR
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1,2])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
+   
 # -- Helper method tests in model.py --    
             
 # Test for creation methods
@@ -339,6 +373,5 @@ def test_count_components(default_Model_instance):
     assert count_dict[test_drug] == 2
     assert count_dict[test_protein] == 1
 
-pytest.main('test_model.py::test5_find_states_that_match_rule')
 
     
