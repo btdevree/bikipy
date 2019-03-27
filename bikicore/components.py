@@ -271,7 +271,9 @@ class CountingSignature(HasTraits):
         # Use the counter on a zipped list of component, conformations) tuples 
         elif count_type == 'conformations included':
             components, conformations = state.generate_component_list()
-            return Counter(zip(components, conformations))
+            # Convert the conformation lists to hashable tuples
+            hashable_conformations = [(*x,) if x else x for x in conformations]
+            return Counter([*zip(components, hashable_conformations)])
         
         
     

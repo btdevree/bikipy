@@ -150,7 +150,29 @@ class Model(HasTraits):
         # No other match modes supported, raise error
         else:
             raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
-
+    
+    def _signature_match_association(self, query_signature, reference_signature):
+        # Helper function that asks if a given query signature matches (any of) the reference signatures in an association context 
+        # Returns True or False
+        # "reference_signature" can be a single signature or a list of signatures (from "conformation included" signatures computed from rule)
+        
+        # Make sure we have a list of references
+        if not isinstance(reference_signature, list):
+            reference_signature = [reference_signature]
+        
+        # This allows us to see the pattern of component mixing between the states
+        def calc_sig_diff(query, ref):
+            pass
+        
+        # Work through each reference signature until we find one that works
+        for refsig in reference_signature:
+            
+            # Need to calculate the differences between third and subject/object states
+            subject_dif_ref = 
+        
+    
+    
+    
     def _count_components(self, components_list):
         # Counts the number of each component in the given list
         # Returns a dictionary with components as keys and a count as an integer value
