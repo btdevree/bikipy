@@ -160,17 +160,50 @@ class Model(HasTraits):
         if not isinstance(reference_signature, list):
             reference_signature = [reference_signature]
         
-        # This allows us to see the pattern of component mixing between the states
-        def calc_sig_diff(query, ref):
-            pass
-        
         # Work through each reference signature until we find one that works
         for refsig in reference_signature:
             
-            # Need to calculate the differences between third and subject/object states
-            subject_dif_ref = 
+            # These are the keys we are looking for, anything else is just extra that we ignore
+            refkeys = refsig.third_state_count.keys()
+            
+            # Check the subject part of the signature
+            # The differences between the third and object states should be equal to the reference subject
+            query_diff_sub = query_signature.third_state_count - query_signature.object_count
+            
+            # If we can find a full set of the reference associated state components in a query, we must delete them (from, i.e., a previous dimerization, etc.)
+            if all([query_diff_sub[key] >= refsig.third_state_count[key] for key in refkeys]):
+                query_diff_sub = query_diff_sub - refsig.third_state_count
+            
+            # We need to have at least the number of components that the reference state has, but we can have more
+            if not all([query_diff_sub[key] >= refsig.subject_count[key] for key in refkeys]):
+                continue # Short-circut the comparison, this one doesn't match the pattern
+            
+            # Check the object part of the signature
+            # The differences between the third and subject states should be equal to the reference object
+            query_diff_obj = query_signature.third_state_count - query_signature.subject_count
+            
+            # If we can find a full set of the reference associated state components in a query, we must delete them (from, i.e., a previous dimerization, etc.)
+            if all([query_diff_obj[key] >= refsig.third_state_count[key] for key in refkeys]):
+                query_diff_obj = query_diff_obj - refsig.third_state_count
+            
+            # We need to have at least the number of components that the reference state has, but we can have more
+            if not all([query_diff_obj[key] >= refsig.object_count[key] for key in refkeys]):
+                continue # Short-circut the comparison, this one doesn't match the pattern
+            
+            # If we arrive here, we have a match and we can short-circut the overall result
+            return True
         
-    
+        # If we arrive here, nothing matched after exhausting the list of reference sequences
+        else:
+            return False
+                
+        # This allows us to see the pattern of component mixing between the states
+        def calc_sig_diff(sig):
+            object_diff = sig.third_state_count - sig.object_count
+            subject_diff = sig.third_state_count - sig.subject_count
+            return((object_diff, subject_diff))
+        
+        # Get the 
     
     
     def _count_components(self, components_list):
