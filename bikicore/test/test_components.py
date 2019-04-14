@@ -370,6 +370,49 @@ def test_generate_component_list_rule(default_Model_irreversable_association, de
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
 
+# Test if the generate_state_tuples gives back a correctly ordered list of state tuples
+def test_generate_state_tuples(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_association
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+    
+    # Have A associates with R([]), with R able to take '' and '*' conformations
+    state_tuples = r1.generate_state_tuples()
+    
+    # expect three tuples, A + R('') --> AR(''), A + R('*') --> AR('*'), and A + R('','*') --> AR('','*'), order of conformations = [['']]
+    assert len(state_tuples == 3)
+    # A + R('') --> AR(''),
+    assert state_tuples[0][0].required_drug_list == [ddi]
+    assert state_tuples[0][0].required_protein_list == []
+    assert state_tuples[0][0].req_protein_conf_lists == []
+    assert state_tuples[0][1].required_drug_list == []
+    assert state_tuples[0][1].required_protein_list == [dpi]
+    assert state_tuples[0][1].req_protein_conf_lists == [[0]]
+    assert state_tuples[0][2].required_drug_list == [ddi]
+    assert state_tuples[0][2].required_protein_list == [dpi]
+    assert state_tuples[0][2].req_protein_conf_lists == [[0]]
+    # A + R('*') --> AR('*')
+    assert state_tuples[1][0].required_drug_list == [ddi]
+    assert state_tuples[1][0].required_protein_list == []
+    assert state_tuples[1][0].req_protein_conf_lists == []
+    assert state_tuples[1][1].required_drug_list == []
+    assert state_tuples[1][1].required_protein_list == [dpi]
+    assert state_tuples[1][1].req_protein_conf_lists == [[1]]
+    assert state_tuples[1][2].required_drug_list == [ddi]
+    assert state_tuples[1][2].required_protein_list == [dpi]
+    assert state_tuples[1][2].req_protein_conf_lists == [[1]]
+    # A + R('','*') --> AR('','*')
+    assert state_tuples[2][0].required_drug_list == [ddi]
+    assert state_tuples[2][0].required_protein_list == []
+    assert state_tuples[2][0].req_protein_conf_lists == []
+    assert state_tuples[2][1].required_drug_list == []
+    assert state_tuples[2][1].required_protein_list == [dpi]
+    assert state_tuples[2][1].req_protein_conf_lists == [[0, 1]]
+    assert state_tuples[2][2].required_drug_list == [ddi]
+    assert state_tuples[2][2].required_protein_list == [dpi]
+    assert state_tuples[2][2].req_protein_conf_lists == [[0, 1]]
+
 # Test if the add_component_list adds a list of components/conformations successfully to a state
 def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):
     dsi = default_State_instance

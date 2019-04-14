@@ -77,10 +77,17 @@ class Model(HasTraits):
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
-                # We need to count the number of components that the rule implies, or else we create unintended oligomerization
+                # We need to check the signatures of each possible assoicates state against the rule to check if it works
+                # Create a list of signatures from the minimim accecptable set of components
                 subject_components, subject_conformations = current_rule.generate_component_list('subject')
                 object_components, object_conformations = current_rule.generate_component_list('object')
                 minimum_components, minimum_conformations = current_rule.generate_component_list('both')
+                
+                # If the rule does not specify any conformations, we will only need a single, component only signature 
+                if all(x == None or x == [] for x in minimum_conformations):
+                    min_reference_sig = bkcc.CountingSignature('components only', s1, s2, s3)
+                
+                
                 subject_counter = Counter(subject_components)
                 object_counter = Counter(object_components)
                 associated_counter = Counter(minimum_components)
@@ -196,40 +203,32 @@ class Model(HasTraits):
         # If we arrive here, nothing matched after exhausting the list of reference sequences
         else:
             return False
-                
-        # This allows us to see the pattern of component mixing between the states
-        def calc_sig_diff(sig):
-            object_diff = sig.third_state_count - sig.object_count
-            subject_diff = sig.third_state_count - sig.subject_count
-            return((object_diff, subject_diff))
-        
-        # Get the 
     
     
-    def _count_components(self, components_list):
-        # Counts the number of each component in the given list
-        # Returns a dictionary with components as keys and a count as an integer value
-        
-        # NOTE: I think this can also be done with Python's collections.counter.
-        
-        # Create and empty dictionary and loop through each component in the list
-        count_dict = {}
-        for component in components_list:
-            
-            # Try to get the value with the component as key
-            try: 
-                number_found = count_dict[component]
-            # If the component is not alreay a key, add it and set the count to 1
-            except KeyError:
-                count_dict[component] = 1
-            # If the component exists as a key, increment the count by one
-            else:
-                count_dict[component] = number_found + 1
-                
-        # Return the counting dictionary
-        return count_dict
+#    def _count_components(self, components_list):
+#        # Counts the number of each component in the given list
+#        # Returns a dictionary with components as keys and a count as an integer value
+#        
+#        # NOTE: I think this can also be done with Python's collections.counter.
+#        
+#        # Create and empty dictionary and loop through each component in the list
+#        count_dict = {}
+#        for component in components_list:
+#            
+#            # Try to get the value with the component as key
+#            try: 
+#                number_found = count_dict[component]
+#            # If the component is not alreay a key, add it and set the count to 1
+#            except KeyError:
+#                count_dict[component] = 1
+#            # If the component exists as a key, increment the count by one
+#            else:
+#                count_dict[component] = number_found + 1
+#                
+#        # Return the counting dictionary
+#        return count_dict
 
-    def _create_association(self, graph, associated_counter, subject_states, object_states):
+    def _create_association(self, graph, subject_states, object_states):
         # Function to connect lists of states into an association relationships on the given graph
         # Makes all valid combinations of the subject and object states
         # Creates a new associated state if one cannot be found in existing graph
@@ -243,6 +242,8 @@ class Model(HasTraits):
                 obj_comp, obj_conf = current_obj_state.generate_component_list()
                 associated_component_list = [*sub_comp, *obj_comp]
                 associated_conformation_list = [*sub_conf, *obj_conf]
+                
+                # See if the new state would match a valid signature
                 
                 # See if this possible state already exists in the graph
                 for current_state in graph.__iter__():

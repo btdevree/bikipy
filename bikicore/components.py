@@ -222,6 +222,27 @@ class Rule(HasTraits):
         component_sorted = [*drug_comp_part, *protein_comp_part, *protein_comp_backpart]
         conformation_sorted = [*drug_conf_part, *protein_conf_part, *protein_conf_backpart]
         return component_sorted, conformation_sorted
+    
+    # Method returns tuples of new states with all possibilites of the appropreate components/conformations
+    def generate_state_tuples(self, supress_conformations = False): 
+        # Returns a list of all possible tuples of new states with components/conformations that can be created with the rule
+       
+        # Make new list
+        state_tuples = []
+        
+        # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
+        if self.rule == ' associates with ':
+                
+            # With no conformations, this is a pretty simple
+            if supress_conformations:
+                new_sub = bkcc.State()
+                new_sub.add_component_list(*self.rule.generate_component_list('subject'))
+                new_obj = bkcc.State()
+                new_obj.add_component_list(*self.rule.generate_component_list('object'))
+                new_obj = bkcc.State()
+                new_obj.add_component_list(*self.rule.generate_component_list('both'))
+            else:
+            
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet
