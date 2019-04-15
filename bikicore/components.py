@@ -224,8 +224,9 @@ class Rule(HasTraits):
         return component_sorted, conformation_sorted
     
     # Method returns tuples of new states with all possibilites of the appropreate components/conformations
-    def generate_state_tuples(self, supress_conformations = False): 
-        # Returns a list of all possible tuples of new states with components/conformations that can be created with the rule
+    def generate_signature_list(self): 
+        # Returns a list of all possible valid signatures that can be created with the rule
+        # Automatically returns component only signatures when no part of the rule askes for it
        
         # Make new list
         state_tuples = []
@@ -242,6 +243,7 @@ class Rule(HasTraits):
                 new_obj = bkcc.State()
                 new_obj.add_component_list(*self.rule.generate_component_list('both'))
             else:
+                pass
             
 
 # Define class as a container for the network graphs of states
@@ -276,22 +278,43 @@ class CountingSignature(HasTraits):
     # Can be created with any number of missing state or rule information
     def __init__(self, count_type, subject_state = None, object_state = None, third_state = None, *args, **kwargs):
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
+        self.count_type = count_type
         if subject_state != None:
-            self.subject_count = self._count_state(subject_state, count_type)
+            self.subject_count = self._count_state(subject_state)
         if object_state != None:
-            self.object_count = self._count_state(object_state, count_type)
+            self.object_count = self._count_state(object_state)
         if third_state != None:
-            self.third_state_count = self._count_state(third_state, count_type)
-        
-    def _count_state(self, state, count_type):
+            self.third_state_count = self._count_state(third_state)
+      
+    def count_for_subject(self, components, conformations = None):
+    # Directly count a list of components/conformations into the subject part of the signature
+        self.subject_count = self._count_list(components, conformations)
+    
+    def count_for_object(self, components, conformations = None):
+    # Directly count a list of components/conformations into the object part of the signature
+        self.object_count = self._count_list(components, conformations)
+    
+    def count_for_third_state(self, components, conformations = None):
+    # Directly count a list of components/conformations into the third state part of the signature
+        self.third_state_count = self._count_list(components, conformations)
+    
+    # Count the component/conformations given by a particular state
+    def _count_state(self, state):
+        components, conformations = state.generate_component_list()
+        return self._count_list(components, conformations)
+    
+    # Send the hashable lists to collections.Counter and send the counting dictionary back to the signature
+    def _count_list(self, components, conformations):
         # Use the counter directly on the list of components 
-        if count_type == 'components only':
-            components, conformations = state.generate_component_list()
+        if self.count_type == 'components only':
             return Counter(components)
        
         # Use the counter on a zipped list of component, conformations) tuples 
-        elif count_type == 'conformations included':
-            components, conformations = state.generate_component_list()
+        elif self.count_type == 'conformations included':
+            # Need an actual list of conformations for this type of signature
+            if conformations == None: #Default value passed from a calling function
+                raise ValueError("Function requries a list of conformations")
+            
             # Convert the conformation lists to hashable tuples
             hashable_conformations = [(*x,) if x else x for x in conformations]
             return Counter([*zip(components, hashable_conformations)])

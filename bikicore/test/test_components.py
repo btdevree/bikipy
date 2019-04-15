@@ -507,5 +507,25 @@ def test_CountingSignature_coformations(default_Protein_instance, default_Drug_i
     assert test_signature.third_state_count[(ddi, None)] == 1
     assert test_signature.third_state_count[(dpi, (0,1))] == 1
     assert test_signature.third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
+
+# Test if we get the intended collections.Counter dictionaries when we create CountingSignatures and add components directly into them
+def test_CountingSignature_direct_counts(default_Protein_instance, default_Drug_instance):
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create signature from lists that are equivilant to states A + R(0,1) --> AR(0,1)
+    test_signature = bkcc.CountingSignature('conformations included')
+    test_signature.count_for_subject([ddi], [None])
+    test_signature.count_for_object([dpi], [[0,1]])
+    test_signature.count_for_third_state([ddi, dpi], [None, [0,1]])
+
+    # Check if we got the expected result
+    assert test_signature.subject_count[(ddi, None)] == 1
+    assert test_signature.subject_count[(dpi, (0,1))] == 0
+    assert test_signature.object_count[(ddi, None)] == 0
+    assert test_signature.object_count[(dpi, (0,1))] == 1
+    assert test_signature.third_state_count[(ddi, None)] == 1
+    assert test_signature.third_state_count[(dpi, (0,1))] == 1
+    assert test_signature.third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
     
 #continue with writing tests.....
