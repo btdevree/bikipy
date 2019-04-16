@@ -234,17 +234,27 @@ class Rule(HasTraits):
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
         if self.rule == ' associates with ':
                 
-            # With no conformations, this is a pretty simple
-            if supress_conformations:
-                new_sub = bkcc.State()
-                new_sub.add_component_list(*self.rule.generate_component_list('subject'))
-                new_obj = bkcc.State()
-                new_obj.add_component_list(*self.rule.generate_component_list('object'))
-                new_obj = bkcc.State()
-                new_obj.add_component_list(*self.rule.generate_component_list('both'))
+            # If we have all None or [] conformations, this is pretty simple and we return a component only signature
+            if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
+                new_sig = CountingSignature('components only')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                new_sig.count_for_third_state(*self.generate_component_list('both'))
+                state_tuples.append(new_sig)
+            
+            # If we have to worry about about conformations, but there is no "any" conformations ([]), this is also pretty simple
+            elif all([x != [] for x in self.subject_conf]) and all([x != [] for x in self.object_conf]):
+                new_sig = CountingSignature('conformations included')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                new_sig.count_for_third_state(*self.generate_component_list('both'))
+                state_tuples.append(new_sig)
+           
+            # We must have at least one "any" conformation but not all, so we make a list of all possible conformations that could fit the rule
             else:
                 pass
-            
+
+        return state_tuples
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet
