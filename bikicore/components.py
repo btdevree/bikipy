@@ -223,13 +223,13 @@ class Rule(HasTraits):
         conformation_sorted = [*drug_conf_part, *protein_conf_part, *protein_conf_backpart]
         return component_sorted, conformation_sorted
     
-    # Method returns tuples of new states with all possibilites of the appropreate components/conformations
+    # Method returns tuples of signatures with all possibilites of the appropreate components/conformations
     def generate_signature_list(self): 
         # Returns a list of all possible valid signatures that can be created with the rule
         # Automatically returns component only signatures when no part of the rule askes for it
        
         # Make new list
-        state_tuples = []
+        signature_list = []
         
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
         if self.rule == ' associates with ':
@@ -240,7 +240,7 @@ class Rule(HasTraits):
                 new_sig.count_for_subject(*self.generate_component_list('subject'))
                 new_sig.count_for_object(*self.generate_component_list('object'))
                 new_sig.count_for_third_state(*self.generate_component_list('both'))
-                state_tuples.append(new_sig)
+                signature_list.append(new_sig)
             
             # If we have to worry about about conformations, but there is no "any" conformations ([]), this is also pretty simple
             elif all([x != [] for x in self.subject_conf]) and all([x != [] for x in self.object_conf]):
@@ -248,13 +248,59 @@ class Rule(HasTraits):
                 new_sig.count_for_subject(*self.generate_component_list('subject'))
                 new_sig.count_for_object(*self.generate_component_list('object'))
                 new_sig.count_for_third_state(*self.generate_component_list('both'))
-                state_tuples.append(new_sig)
+                signature_list.append(new_sig)
            
             # We must have at least one "any" conformation but not all, so we make a list of all possible conformations that could fit the rule
             else:
-                pass
-
-        return state_tuples
+                # Save the lists of components/conformations
+                sub_comp, sub_conf = self.generate_component_list('subject')
+                obj_comp, obj_conf = self.generate_component_list('object')
+                third_state_comp = [sub_comp, obj_comp]
+                
+                # Find the "any" conformations
+                sub_any_index = []
+                for index, current_conf in enumerate(sub_conf):
+                    if current_conf == []:
+                        sub_any_index.append(index)
+                obj_any_index = []
+                for index, current_conf in enumerate(obj_conf):
+                    if current_conf == []:
+                        obj_any_index.append(index)                
+                
+                # Get the number of allowed conformations for each "any"
+                allowed_conformations = []
+                for sub_index in sub_any_index:
+                    allowed_conformations.append(range(sub_comp[sub_index].conformation_names))
+                for obj_index in obj_any_index:
+                    allowed_conformations.append(range(obj_comp[obj_index].conformation_names))
+                
+                # Get all combinations of each allowed list
+                allowed_conf_combos = []
+                for allowed_conf in allowed_conformations: # Do this for each list of "any" conformations
+                    new_combos = []
+                    for num_conf in range(1, len(allowed_conf) + 1): # Need to repeat for single, double, etc. allowed number of conformations
+                        new_combos.extend(itertools.combinations(allowed_conf, num_conf))
+                    allowed_conf_combos.append(new_combos) # Add the list of combos to the main list
+                
+                # Now we construct a signature for each combination
+                for comboset in itertools.product(*allowed_conf_combos):
+                    
+                    # We need to replace the "any" conformations in the conformation lists
+                    new_sub_conf = sub_conf
+                    for sub_index in sub_any_index:
+                        new_sub_conf[sub_index] = comboset[sub_index]
+                    new_obj_conf = obj_conf
+                    for obj_index in obj_any_index:
+                        new_obj_conf[obj_index] = comboset[obj_index + sub_any_index[-1]]
+                    
+                    # Now create a signature from the lists
+                    new_sig = CountingSignature('conformations included')
+                    new_sig.count_for_subject(sub_comp, new_sub_conf)
+                    new_sig.count_for_object(obj_comp, new_obj_conf)
+                    new_sig.count_for_third_state(third_state_comp, new_sub_conf + new_obj_conf)
+                    signature_list.append(new_sig)
+        
+        return signature_list
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet
