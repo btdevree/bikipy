@@ -255,7 +255,8 @@ class Rule(HasTraits):
                 # Save the lists of components/conformations
                 sub_comp, sub_conf = self.generate_component_list('subject')
                 obj_comp, obj_conf = self.generate_component_list('object')
-                third_state_comp = [sub_comp, obj_comp]
+                third_state_comp = sub_comp + obj_comp
+                print('start!', sub_conf + obj_conf)
                 
                 # Find the "any" conformations
                 sub_any_index = []
@@ -270,9 +271,9 @@ class Rule(HasTraits):
                 # Get the number of allowed conformations for each "any"
                 allowed_conformations = []
                 for sub_index in sub_any_index:
-                    allowed_conformations.append(range(sub_comp[sub_index].conformation_names))
+                    allowed_conformations.append(range(len(sub_comp[sub_index].conformation_names)))
                 for obj_index in obj_any_index:
-                    allowed_conformations.append(range(obj_comp[obj_index].conformation_names))
+                    allowed_conformations.append(range(len(obj_comp[obj_index].conformation_names)))
                 
                 # Get all combinations of each allowed list
                 allowed_conf_combos = []
@@ -286,18 +287,22 @@ class Rule(HasTraits):
                 for comboset in itertools.product(*allowed_conf_combos):
                     
                     # We need to replace the "any" conformations in the conformation lists
-                    new_sub_conf = sub_conf
-                    for sub_index in sub_any_index:
-                        new_sub_conf[sub_index] = comboset[sub_index]
-                    new_obj_conf = obj_conf
-                    for obj_index in obj_any_index:
-                        new_obj_conf[obj_index] = comboset[obj_index + sub_any_index[-1]]
+                    new_sub_conf = sub_conf.copy()
+                    for combo_index, sub_index in enumerate(sub_any_index):
+                        new_sub_conf[sub_index] = comboset[combo_index]
+                    new_obj_conf = obj_conf.copy()
+                    for combo_index, obj_index in enumerate(obj_any_index):
+                        new_obj_conf[obj_index] = comboset[combo_index + len(sub_any_index)]
                     
                     # Now create a signature from the lists
                     new_sig = CountingSignature('conformations included')
+                    print('components subject ', sub_comp,' old conf ', sub_conf,' new conf ', new_sub_conf)
                     new_sig.count_for_subject(sub_comp, new_sub_conf)
+                    print('components object ', obj_comp,' old conf ', obj_conf,' new conf ', new_obj_conf)
                     new_sig.count_for_object(obj_comp, new_obj_conf)
-                    new_sig.count_for_third_state(third_state_comp, new_sub_conf + new_obj_conf)
+                    combinded_third_state_conf = new_sub_conf + new_obj_conf
+                    print('components third ', third_state_comp,' old conf ', sub_conf + obj_conf,' new conf ', combinded_third_state_conf)
+                    new_sig.count_for_third_state(third_state_comp, combinded_third_state_conf)
                     signature_list.append(new_sig)
         
         return signature_list

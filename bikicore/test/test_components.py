@@ -432,43 +432,46 @@ def test_generate_signature_list_any_conformations_included(default_Model_irreve
     assert sig_list[0].count_type == 'conformations included'
     # A + R(0)R(0,1) --> AR(0)R(0,1)
     assert sig_list[0].subject_count[(ddi, None)] == 1
-    assert sig_list[0].subject_count[(dpi, (0))] == 0
-    assert sig_list[0].subject_count[(dpi, (1))] == 0
+    assert sig_list[0].subject_count[(dpi, (0,))] == 0
+    assert sig_list[0].subject_count[(dpi, (1,))] == 0
     assert sig_list[0].subject_count[(dpi, (0,1))] == 0
     assert sig_list[0].object_count[(ddi, None)] == 0
-    assert sig_list[0].object_count[(dpi, (0))] == 1
-    assert sig_list[0].object_count[(dpi, (1))] == 0
+    assert sig_list[0].object_count[(dpi, (0,))] == 1
+    assert sig_list[0].object_count[(dpi, (1,))] == 0
     assert sig_list[0].object_count[(dpi, (0,1))] == 1
     assert sig_list[0].third_state_count[(ddi, None)] == 1
-    assert sig_list[0].third_state_count[(dpi, (0))] == 1
-    assert sig_list[0].third_state_count[(dpi, (1))] == 0
+    assert sig_list[0].third_state_count[(dpi, (0,))] == 1
+    assert sig_list[0].third_state_count[(dpi, (1,))] == 0
     assert sig_list[0].third_state_count[(dpi, (0,1))] == 1
     # A + R(1)R(0,1) --> AR(1)R(0,1)
     assert sig_list[1].subject_count[(ddi, None)] == 1
-    assert sig_list[1].subject_count[(dpi, (0))] == 0
-    assert sig_list[1].subject_count[(dpi, (1))] == 0
+    assert sig_list[1].subject_count[(dpi, (0,))] == 0
+    assert sig_list[1].subject_count[(dpi, (1,))] == 0
     assert sig_list[1].subject_count[(dpi, (0,1))] == 0
     assert sig_list[1].object_count[(ddi, None)] == 0
-    assert sig_list[1].object_count[(dpi, (0))] == 0
-    assert sig_list[1].object_count[(dpi, (1))] == 1
+    assert sig_list[1].object_count[(dpi, (0,))] == 0
+    assert sig_list[1].object_count[(dpi, (1,))] == 1
     assert sig_list[1].object_count[(dpi, (0,1))] == 1
     assert sig_list[1].third_state_count[(ddi, None)] == 1
-    assert sig_list[1].third_state_count[(dpi, (0))] == 0
-    assert sig_list[1].third_state_count[(dpi, (1))] == 1
+    assert sig_list[1].third_state_count[(dpi, (0,))] == 0
+    assert sig_list[1].third_state_count[(dpi, (1,))] == 1
     assert sig_list[1].third_state_count[(dpi, (0,1))] == 1
     # A + R(0,1)R(0,1) --> AR(0,1)R(0,1)
     assert sig_list[2].subject_count[(ddi, None)] == 1
-    assert sig_list[2].subject_count[(dpi, (0))] == 0
-    assert sig_list[2].subject_count[(dpi, (1))] == 0
+    assert sig_list[2].subject_count[(dpi, (0,))] == 0
+    assert sig_list[2].subject_count[(dpi, (1,))] == 0
     assert sig_list[2].subject_count[(dpi, (0,1))] == 0
     assert sig_list[2].object_count[(ddi, None)] == 0
-    assert sig_list[2].object_count[(dpi, (0))] == 0
-    assert sig_list[2].object_count[(dpi, (1))] == 0
+    assert sig_list[2].object_count[(dpi, (0,))] == 0
+    assert sig_list[2].object_count[(dpi, (1,))] == 0
     assert sig_list[2].object_count[(dpi, (0,1))] == 2
     assert sig_list[2].third_state_count[(ddi, None)] == 1
-    assert sig_list[2].third_state_count[(dpi, (0))] == 0
-    assert sig_list[2].third_state_count[(dpi, (1))] == 0
+    assert sig_list[2].third_state_count[(dpi, (0,))] == 0
+    assert sig_list[2].third_state_count[(dpi, (1,))] == 0
     assert sig_list[2].third_state_count[(dpi, (0,1))] == 2
+    
+    #NOTE: Kinda complex function, perhaps more tests would be appropreate? 
+    #Also, this is gonna need to be refactored to split out the "any" conformation replacemetn from the rule-specific signature generation 
     
 # Test if the add_component_list adds a list of components/conformations successfully to a state
 def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):

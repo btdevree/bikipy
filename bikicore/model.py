@@ -2,6 +2,7 @@
 """
 
 import uuid
+import itertools
 import networkx as nx
 import bikipy.bikicore.components as bkcc
 from collections import Counter
@@ -73,29 +74,19 @@ class Model(HasTraits):
             # Irreversable association
             if current_rule.rule == ' associates with ':
                 
+                # Get a list of accecptable signatures for the rule and read which type of signature we need
+                reference_signatures = current_rule.generate_signature_list()
+                
                 # Find states that fit the rule discription
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
-                # We need to check the signatures of each possible assoicates state against the rule to check if it works
-                # Create a list of signatures from the minimim accecptable set of components
-                subject_components, subject_conformations = current_rule.generate_component_list('subject')
-                object_components, object_conformations = current_rule.generate_component_list('object')
-                minimum_components, minimum_conformations = current_rule.generate_component_list('both')
+                # Find the pairings of subject and object states that create valid signatures
+                valid_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
                 
-                # If the rule does not specify any conformations, we will only need a single, component only signature 
-                if all(x == None or x == [] for x in minimum_conformations):
-                    min_reference_sig = bkcc.CountingSignature('components only', s1, s2, s3)
-                
-                
-                subject_counter = Counter(subject_components)
-                object_counter = Counter(object_components)
-                associated_counter = Counter(minimum_components)
-                subject_difference = associated_counter - subject_counter
-                object_difference = associated_counter - object_counter
-                
-                # Associate any valid associated states between the matching subject and object states by calling the basic association helper method
-                self._create_association(graph, component_counter, matching_subject_states, matching_object_states)
+                # Associate any valid pairs of states 
+                for current_state_tuple in valid_state_tuple_list:
+                    self._create_association(graph, *current_state_tuple)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -157,18 +148,41 @@ class Model(HasTraits):
         # No other match modes supported, raise error
         else:
             raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
+   
+    def _find_association_pairs(self, reference_signatures, matching_subject_states, matching_object_states):
+        # Function that returns a list of 2-tuples containing a valid subject and object state pair for an association reaction
+        
+        # Get the type of signatures required
+        count_type = reference_signatures[0].count_type
+        
+        # Loop through all the possible combinations of subject and object states and store any valid pairs
+        valid_pairs = []
+        for current_tuple in itertools.product(matching_subject_states, matching_object_states):
+            
+            # Create a signature from the current pair
+            test_signature = bkcc.CountingSignature(count_type, *current_tuple)
+            sub_comp, sub_conf = current_tuple[0].generate_component_list()
+            obj_comp, obj_conf = current_tuple[0].generate_component_list()
+            test_signature.third_state_count(sub_comp + obj_comp, sub_conf + obj_conf)
+            
+            # See if the test signature matches with any of the reference ones
+            if self._signature_match_association(test_signature, reference_signatures):
+                valid_pairs.append(current_tuple)
+        
+        # Give the list of tuples back
+        return valid_pairs
     
-    def _signature_match_association(self, query_signature, reference_signature):
+    def _signature_match_association(self, query_signature, reference_signatures):
         # Helper function that asks if a given query signature matches (any of) the reference signatures in an association context 
         # Returns True or False
         # "reference_signature" can be a single signature or a list of signatures (from "conformation included" signatures computed from rule)
         
         # Make sure we have a list of references
-        if not isinstance(reference_signature, list):
-            reference_signature = [reference_signature]
+        if not isinstance(reference_signatures, list):
+            reference_signatures = [reference_signatures]
         
         # Work through each reference signature until we find one that works
-        for refsig in reference_signature:
+        for refsig in reference_signatures:
             
             # These are the keys we are looking for, anything else is just extra that we ignore
             refkeys = refsig.third_state_count.keys()
@@ -203,64 +217,33 @@ class Model(HasTraits):
         # If we arrive here, nothing matched after exhausting the list of reference sequences
         else:
             return False
-    
-    
-#    def _count_components(self, components_list):
-#        # Counts the number of each component in the given list
-#        # Returns a dictionary with components as keys and a count as an integer value
-#        
-#        # NOTE: I think this can also be done with Python's collections.counter.
-#        
-#        # Create and empty dictionary and loop through each component in the list
-#        count_dict = {}
-#        for component in components_list:
-#            
-#            # Try to get the value with the component as key
-#            try: 
-#                number_found = count_dict[component]
-#            # If the component is not alreay a key, add it and set the count to 1
-#            except KeyError:
-#                count_dict[component] = 1
-#            # If the component exists as a key, increment the count by one
-#            else:
-#                count_dict[component] = number_found + 1
-#                
-#        # Return the counting dictionary
-#        return count_dict
 
-    def _create_association(self, graph, subject_states, object_states):
-        # Function to connect lists of states into an association relationships on the given graph
-        # Makes all valid combinations of the subject and object states
+    def _create_association(self, graph, subject_state, object_state):
+        # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
+                     
+        # Create sorted lists of components/conformations for a possible associated state
+        sub_comp, sub_conf = subject_state.generate_component_list()
+        obj_comp, obj_conf = object_state.generate_component_list()
+        associated_component_list = sub_comp + obj_comp
+        associated_conformation_list = sub_conf + obj_conf
+                
+        # See if this possible state already exists in the graph
+        for current_state in graph.__iter__():
+            if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, match = 'exact'):
+                # If the state already exists, use it
+                associated_state = current_state
+                break
         
-        # Loop through each subject and object state
-        for current_sub_state in subject_states:
-            for current_obj_state in object_states:
-                       
-                # Create sorted lists of components/conformations for a possible associated state
-                sub_comp, sub_conf = current_sub_state.generate_component_list()
-                obj_comp, obj_conf = current_obj_state.generate_component_list()
-                associated_component_list = [*sub_comp, *obj_comp]
-                associated_conformation_list = [*sub_conf, *obj_conf]
-                
-                # See if the new state would match a valid signature
-                
-                # See if this possible state already exists in the graph
-                for current_state in graph.__iter__():
-                    if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, match = 'exact'):
-                        # If the state already exists, use it
-                        associated_state = current_state
-                        break
-                
-                # If no valid associated state alreay exists, create a new one
-                else: # no break
-                    associated_state = bkcc.State()
-                    associated_state.add_component_list(associated_component_list, associated_conformation_list)
-                    
-                # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
-                graph.add_edge(current_sub_state, associated_state)
-                graph.add_edge(current_obj_state, associated_state)
-                    
+        # If no valid associated state alreay exists, create a new one
+        else: # no break
+            associated_state = bkcc.State()
+            associated_state.add_component_list(associated_component_list, associated_conformation_list)
+            
+        # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
+        graph.add_edge(subject_state, associated_state)
+        graph.add_edge(object_state, associated_state)
+            
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
