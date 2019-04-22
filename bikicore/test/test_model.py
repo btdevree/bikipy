@@ -355,7 +355,81 @@ def test7_find_states_that_match_rule(model_for_matching_tests):
     # Check output, no states should be found
     assert subject_list == []
     assert object_list == []
-
-
+    
+# Do we return valid state pairs with a simple signature
+def test_find_association_pairs(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # We already have the rule A + R([]) --> AR([]), get the signature
+    ref_sig = mmt.rule_list[0].generate_signature_list()
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State()
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0,1]]
+    
+    s3 = bkcc.State()
+    s3.required_drug_list = [ddi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[0,1]]
+    
+    # Make some state lists
+    test_sub_list = [s1, s3]
+    test_obj_list = [s2, s3]
+    
+    # Run function
+    valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
+    
+    # Check if we got the expected result
+    assert valid_tuples == [(s1, s2)]
+    
+    # Do we return valid state pairs with a conformation signature
+def test_find_association_pairs_with_conformation(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Modify rule to give A + R([1]) --> AR([1]), get the signature
+    mmt.rule_list[0].object_conf = [[1]]
+    ref_sig = mmt.rule_list[0].generate_signature_list()
+    print(ref_sig[0].count_type)
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State()
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[1]]
+    
+    s3 = bkcc.State()
+    s3.required_drug_list = [ddi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[1]]
+    
+    s4 = bkcc.State()
+    s4.required_protein_list = [dpi]
+    s4.req_protein_conf_lists = [[0]]
+    
+    s5 = bkcc.State()
+    s5.required_drug_list = [ddi]
+    s5.required_protein_list = [dpi]
+    s5.req_protein_conf_lists = [[0]]
+    
+    # Make some state lists (not all these should actually be identified by the matching code, but should be rejected nontheless)
+    test_sub_list = [s1, s3, s4, s5]
+    test_obj_list = [s2, s3, s4, s5]
+    
+    # Run function
+    valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
+    print(valid_tuples)
+    print('s5', s5)
+    # Check if we got the expected result
+    assert valid_tuples == [(s1, s2)]
 
     

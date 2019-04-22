@@ -7,7 +7,7 @@ import uuid
 import itertools
 import networkx as nx
 from collections import Counter
-from traits.api import HasTraits, Str, List, Int, Instance, Enum, Either
+from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 # Define classes for the different components of the biochemical system
@@ -45,6 +45,7 @@ class State(HasTraits):
     required_drug_list = List(Instance(Drug))
     required_protein_list = List(Instance(Protein))
     req_protein_conf_lists = List(List(Int()))
+    internal_links = List(Tuple(Int()))
     
     # Want to give a new state an ID right away, determined by the network generation code
     def __init__(self, *args, **kwargs):
@@ -74,6 +75,33 @@ class State(HasTraits):
         self.required_protein_list.extend([x for x in incoming_components if isinstance(x, Protein)])
         self.req_protein_conf_lists.extend([incoming_conformations[i] for i, x in enumerate(incoming_components) if isinstance(x, Protein)])
     
+    def enumerate_components(self, return_conformations = False):
+        # A generator that returns an integer index and the corrsoponding component (and conformation if requested) of all the state's components
+        # The components are ordered all drugs first, then proteins
+        
+        # Loop through the drugs first
+        comp_num = 0
+        for drug in self.required_drug_list:
+            if return_conformations:
+                yield (comp_num, self.required_drug_list[comp_num], None)
+            else:
+                yield (comp_num, self.required_drug_list[comp_num])
+            comp_num += 1
+        
+        # Now we loop through proteins after saving the number of drugs
+        offset_num = comp_num # Note: integers are immutable
+        for protein in self.required_protein_list:
+            if return_conformations:
+                yield (comp_num, self.required_protein_list[comp_num - offset_num], self.req_protein_conf_lists[comp_num - offset_num])
+            else:
+                yield (comp_num, self.required_protein_list[comp_num - offset_num])
+            comp_num += 1
+    
+    def get_component_by_number(self, request_number, return_conformations = False):
+        # Return a state component (and conformations if requested) by number
+        
+        pass
+        
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    
     #Superclass for all transition objects
@@ -356,7 +384,7 @@ class CountingSignature(HasTraits):
         self.object_count = self._count_list(components, conformations)
     
     def count_for_third_state(self, components, conformations = None):
-    # Directly count a list of components/conformations into the third state part of the signature
+    # Directly count a list of components/conformations into the third state part of the signature   
         self.third_state_count = self._count_list(components, conformations)
     
     # Count the component/conformations given by a particular state
@@ -375,9 +403,9 @@ class CountingSignature(HasTraits):
             # Need an actual list of conformations for this type of signature
             if conformations == None: #Default value passed from a calling function
                 raise ValueError("Function requries a list of conformations")
-            
+                
             # Convert the conformation lists to hashable tuples
-            hashable_conformations = [(*x,) if x else x for x in conformations]
+            hashable_conformations = [(*x,) if x != None else x for x in conformations]
             return Counter([*zip(components, hashable_conformations)])
         
         

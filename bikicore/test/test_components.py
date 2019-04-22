@@ -149,9 +149,12 @@ def test_State_has_req_drug_list(default_State_instance):
     assert hasattr(default_State_instance, 'required_drug_list')
 def test_State_has_req_protein_list(default_State_instance):
     assert hasattr(default_State_instance, 'required_protein_list')
-def test_State_has_req_protein_conf_list(default_State_instance):
+def test_State_has_req_protein_conf_lists(default_State_instance):
     assert hasattr(default_State_instance, 'req_protein_conf_lists')
+def test_State_has_internal_links(default_State_instance):
+    assert hasattr(default_State_instance, 'internal_links')
 
+# See if we return correctly ordered lists from our state 
 def test_generate_component_list_state(default_State_instance, default_Protein_instance, default_Drug_instance):
     dsi = default_State_instance
     dpi = default_Protein_instance
@@ -168,6 +171,78 @@ def test_generate_component_list_state(default_State_instance, default_Protein_i
     returned_components, returned_conformations = dsi.generate_component_list()
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
+
+# Test if the add_component_list adds a list of components/conformations successfully to a state
+def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some lists of components/conformations
+    test_comp = [ddi, dpi, ddi]
+    test_conf = [[None], [0,1], [None]]
+    
+    # Ask the state to add these
+    dsi.add_component_list(test_comp, test_conf)
+    
+    # The lists should be added to the state
+    assert dsi.required_drug_list == [ddi, ddi]
+    assert dsi.required_protein_list == [dpi]
+    assert dsi.req_protein_conf_lists == [[0,1]]
+
+# Test if the state component generator is giving us the values back in correct order
+def test_enumerate_components(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi, ddi]
+    dsi.required_protein_list = [dpi, dpi]
+    dsi.req_protein_conf_lists = [[0], [0,1]]
+    
+    # Test output
+    expected_index = range(4)
+    expected_components = [ddi, ddi, dpi, dpi]
+    
+    for output_tuple, test_tuple in zip(dsi.enumerate_components(), zip(expected_index, expected_components)):
+        assert output_tuple == test_tuple
+        
+# Test if the state component generator is giving us the values back in correct order with conformations
+def test_enumerate_components_and_conformations(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi, ddi]
+    dsi.required_protein_list = [dpi, dpi]
+    dsi.req_protein_conf_lists = [[0], [0,1]]
+    
+    # Test output
+    expected_index = range(4)
+    expected_components = [ddi, ddi, dpi, dpi]
+    expected_conformations = [None, None, [0], [0,1]]
+    
+    for output_tuple, test_tuple in zip(dsi.enumerate_components(return_conformations = True), zip(expected_index, expected_components, expected_conformations)):
+        assert output_tuple == test_tuple
+    
+# Test for pulling the correct components out of a state by number
+def test_get_component_by_number(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi, ddi]
+    dsi.required_protein_list = [dpi, dpi]
+    dsi.req_protein_conf_lists = [[0], [0,1]]
+    
+    # Test output
+    assert ddi == dsi.get_component_by_number(0)
+    assert ddi == dsi.get_component_by_number(1)
+    assert dpi == dsi.get_component_by_number(2)
+    assert dpi == dsi.get_component_by_number(3)
 
 # -------Tests for ConformationalChange objects-------
 
@@ -473,24 +548,6 @@ def test_generate_signature_list_any_conformations_included(default_Model_irreve
     #NOTE: Kinda complex function, perhaps more tests would be appropreate? 
     #Also, this is gonna need to be refactored to split out the "any" conformation replacemetn from the rule-specific signature generation 
     
-# Test if the add_component_list adds a list of components/conformations successfully to a state
-def test_add_component_list(default_State_instance, default_Protein_instance, default_Drug_instance):
-    dsi = default_State_instance
-    dpi = default_Protein_instance
-    ddi = default_Drug_instance # For typing convenience
-    
-    # Make some lists of components/conformations
-    test_comp = [ddi, dpi, ddi]
-    test_conf = [[None], [0,1], [None]]
-    
-    # Ask the state to add these
-    dsi.add_component_list(test_comp, test_conf)
-    
-    # The lists should be added to the state
-    assert dsi.required_drug_list == [ddi, ddi]
-    assert dsi.required_protein_list == [dpi]
-    assert dsi.req_protein_conf_lists == [[0,1]]
-
 # ------Tests for Network objects------
 
 #Test if Network objects have the required properties

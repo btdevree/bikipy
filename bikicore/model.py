@@ -5,7 +5,6 @@ import uuid
 import itertools
 import networkx as nx
 import bikipy.bikicore.components as bkcc
-from collections import Counter
 from traits.api import HasTraits, Int, Str, Instance, This, List
 
 
@@ -158,12 +157,12 @@ class Model(HasTraits):
         # Loop through all the possible combinations of subject and object states and store any valid pairs
         valid_pairs = []
         for current_tuple in itertools.product(matching_subject_states, matching_object_states):
-            
+
             # Create a signature from the current pair
             test_signature = bkcc.CountingSignature(count_type, *current_tuple)
             sub_comp, sub_conf = current_tuple[0].generate_component_list()
-            obj_comp, obj_conf = current_tuple[0].generate_component_list()
-            test_signature.third_state_count(sub_comp + obj_comp, sub_conf + obj_conf)
+            obj_comp, obj_conf = current_tuple[1].generate_component_list()
+            test_signature.count_for_third_state(sub_comp + obj_comp, sub_conf + obj_conf)
             
             # See if the test signature matches with any of the reference ones
             if self._signature_match_association(test_signature, reference_signatures):
