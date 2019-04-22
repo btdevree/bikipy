@@ -243,6 +243,46 @@ class Model(HasTraits):
         graph.add_edge(subject_state, associated_state)
         graph.add_edge(object_state, associated_state)
             
+    def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = True):
+        # Function to translate the link list from state 2 into that from state 1, assuming association of the two states
+        
+        # How many of each type of component are in each state
+        num_1_drug = len(state_1.required_drug_list)
+        num_1_protein = len(state_1.required_protein_list)
+        num_2_drug = len(state_2.required_drug_list)
+        num_2_protein = len(state_2.required_protein_list)
+#        num_12_drug = num_1_drug + num_2_drug
+#        num_12_protein = num_1_protein + num_2_protein
+        
+        # Make 1 to 12 translation dictionary
+        translate_1_to_12 = {}
+        for old_index in range(0, num_1_drug):
+            translate_1_to_12[old_index] = old_index
+        for old_index in range(num_1_drug, num_1_drug + num_1_protein):
+            translate_1_to_12[old_index] = old_index + num_2_drug
+            
+        # Make 2 to 12 translation dictionary
+        translate_2_to_12 = {}
+        for old_index in range(0, num_2_drug):
+            translate_2_to_12[old_index] = old_index + num_1_drug
+        for old_index in range(num_2_drug, num_2_drug + num_2_protein):
+            translate_2_to_12[old_index] = old_index + num_1_drug + num_1_protein
+        
+        # Process each link list !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        def copy_tree(tree):
+    # generator expression - only run when consumed by tuple later on
+    children = (
+        copy_tree(child) if isinstance(child, tuple) else child
+        for child in tree
+    )
+    return tuple(children)
+        
+        # Make 12 to 1 and 12 to 2 dictionaries, should be no problem since the entries are unique
+        translate_12_to_1 = {value: key for key, value in translate_1_to_12.items()}
+        translate_12_to_2 = {value: key for key, value in translate_2_to_12.items()}
+                    
+        pass
+    
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)

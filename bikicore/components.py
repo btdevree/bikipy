@@ -45,7 +45,7 @@ class State(HasTraits):
     required_drug_list = List(Instance(Drug))
     required_protein_list = List(Instance(Protein))
     req_protein_conf_lists = List(List(Int()))
-    internal_links = List(Tuple(Int()))
+    internal_links = List(Tuple())
     
     # Want to give a new state an ID right away, determined by the network generation code
     def __init__(self, *args, **kwargs):
@@ -100,7 +100,31 @@ class State(HasTraits):
     def get_component_by_number(self, request_number, return_conformations = False):
         # Return a state component (and conformations if requested) by number
         
-        pass
+        # Need to deal with two lists of components
+        offset_num = len(self.required_drug_list)
+        max_num = offset_num + len(self.required_protein_list)
+        
+        # Not going to implement negative indexing here
+        if request_number < 0:
+            raise IndexError('index out of bounds, negative indexing not supported')
+        
+        # If number is less than the offset, return a drug
+        elif request_number < offset_num:
+            if return_conformations:
+                return self.required_drug_list[request_number], None
+            else:
+                return self.required_drug_list[request_number]
+        
+        # If number is equal or more than offset but still valid, return a protein
+        elif request_number < max_num:
+            if return_conformations:
+                return self.required_protein_list[request_number - offset_num], self.req_protein_conf_lists[request_number - offset_num]
+            else:
+                return self.required_protein_list[request_number - offset_num]
+        
+        # Can't ask for more components than are listed in the state
+        elif request_number >= max_num:
+            raise IndexError('index out of bounds, value too high')
         
 # Define classes for the different types of state transitions - edges on network graph
 class StateTransition(HasTraits):    

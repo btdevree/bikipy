@@ -243,7 +243,30 @@ def test_get_component_by_number(default_State_instance, default_Protein_instanc
     assert ddi == dsi.get_component_by_number(1)
     assert dpi == dsi.get_component_by_number(2)
     assert dpi == dsi.get_component_by_number(3)
+    with pytest.raises(IndexError):
+        dsi.get_component_by_number(-1)
+        dsi.get_component_by_number(4)
 
+# Test for pulling the correct components and conformations out of a state by number
+def test_get_component_by_number_with_conformation(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi, ddi]
+    dsi.required_protein_list = [dpi, dpi]
+    dsi.req_protein_conf_lists = [[0], [0,1]]
+    
+    # Test output
+    assert ddi, None == dsi.get_component_by_number(0, return_conformations = True)
+    assert ddi, None == dsi.get_component_by_number(1, True)
+    assert dpi, [0] == dsi.get_component_by_number(2, return_conformations = True)
+    assert dpi, [0,1] == dsi.get_component_by_number(3, True)
+    with pytest.raises(IndexError):
+        dsi.get_component_by_number(-1, return_conformations = True)
+        dsi.get_component_by_number(4, True)
+        
 # -------Tests for ConformationalChange objects-------
 
 # Test if ConformationalChange objects have the required properties

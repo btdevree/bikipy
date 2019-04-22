@@ -356,7 +356,7 @@ def test7_find_states_that_match_rule(model_for_matching_tests):
     assert subject_list == []
     assert object_list == []
     
-# Do we return valid state pairs with a simple signature
+# Test that we return valid state pairs with a simple signature
 def test_find_association_pairs(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
     dpi = default_Protein_instance
@@ -388,7 +388,7 @@ def test_find_association_pairs(model_for_matching_tests, default_Protein_instan
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
     
-    # Do we return valid state pairs with a conformation signature
+# Test that we return valid state pairs with a conformation signature
 def test_find_association_pairs_with_conformation(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
     dpi = default_Protein_instance
@@ -429,7 +429,32 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
     print(valid_tuples)
     print('s5', s5)
+    
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
 
+# Test for correct translation of link lists
+def test_combine_internal_link_lists(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[1]]
+    s1.internal_links = [(0,1)] # {AR(1)}
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = [ddi]
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[0], [1]]
+    s2.internal_links = [(0,2)] # {AR(1)}R(0)
+    
+    # Run method
+    test_link_list = mmt._combine_internal_link_lists(s1, s2)
+    
+    # Check if we got the expected result
+    assert test_link_list == [(0, 2), (1, 4)]
     
