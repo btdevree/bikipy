@@ -444,17 +444,103 @@ def test_combine_internal_link_lists(model_for_matching_tests, default_Protein_i
     s1.required_drug_list = [ddi]
     s1.required_protein_list = [dpi]
     s1.req_protein_conf_lists = [[1]]
-    s1.internal_links = [(0,1)] # {AR(1)}
+    s1.internal_links = [(0, 1)] # {AR(1)}
     
     s2 = bkcc.State()
     s2.required_drug_list = [ddi]
     s2.required_protein_list = [dpi, dpi]
     s2.req_protein_conf_lists = [[0], [1]]
-    s2.internal_links = [(0,2)] # {AR(1)}R(0)
+    s2.internal_links = [(0, 2)] # {AR(1)}R(0)
     
     # Run method
     test_link_list = mmt._combine_internal_link_lists(s1, s2)
     
     # Check if we got the expected result
     assert test_link_list == [(0, 2), (1, 4)]
+    
+# Test for correct translation of link lists with a nested link
+def test_combine_internal_link_lists_nested_link(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[1]]
+    s1.internal_links = [(0, 1)] # {AR(1)}
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = [ddi]
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[0], [1]]
+    s2.internal_links = [(0, (1,2))] # {A{R(1)R(0)}} A is associated specifically with the dimer of R's.
+    
+    # Run method
+    test_link_list = mmt._combine_internal_link_lists(s1, s2)
+    
+    # Check if we got the expected result
+    assert test_link_list == [(0, 2), (1, (3, 4))]
+
+# Test if the method returns the translation dictionarys
+def test_combine_internal_link_lists_with_dicts(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[1]]
+    s1.internal_links = [(0, 1)] # {AR(1)}
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = [ddi]
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[0], [1]]
+    s2.internal_links = [(0, 2)] # {AR(1)}R(0)
+    
+    # Run method
+    test_link_list, translation_dicts = mmt._combine_internal_link_lists(s1, s2, True)
+    
+    # Dictionaries are returned in order: 1 to 12, 2 to 12, 12 to 1, 12 to 2
+    assert len(translation_dicts) == 4
+    assert translation_dicts[0][0] == 0
+    assert translation_dicts[0][1] == 2
+    assert translation_dicts[1][0] == 1
+    assert translation_dicts[1][1] == 3    
+    assert translation_dicts[1][2] == 4
+    assert translation_dicts[2][0] == 0
+    assert translation_dicts[2][2] == 1
+    with pytest.raises(KeyError): # These keys should not exist
+        translation_dicts[2][1]
+        translation_dicts[2][3]
+        translation_dicts[2][4]
+    assert translation_dicts[3][1] == 0
+    assert translation_dicts[3][3] == 1    
+    assert translation_dicts[3][4] == 2
+    with pytest.raises(KeyError): # These keys should not exist
+        translation_dicts[3][0]
+        translation_dicts[3][2]
+
+# Test if the internal link finding/testing function returns the expected result        
+def test_find_association_internal_link(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+#    # Make some states
+#    s1 = bkcc.State()
+#    s1.required_drug_list = [ddi]
+#    s1.required_protein_list = [dpi]
+#    s1.req_protein_conf_lists = [[1]]
+#    s1.internal_links = [(0, 1)] # {AR(1)}
+#    
+#    s2 = bkcc.State()
+#    s2.required_drug_list = [ddi]
+#    s2.required_protein_list = [dpi, dpi]
+#    s2.req_protein_conf_lists = [[0], [1]]
+#    s2.internal_links = [(0, 2)] # {AR(1)}R(0)
     

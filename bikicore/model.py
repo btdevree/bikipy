@@ -80,11 +80,14 @@ class Model(HasTraits):
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
-                # Find the pairings of subject and object states that create valid signatures
-                valid_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
+                # Find the possible pairings of subject and object states that create valid signatures
+                possible_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
+                
+                # Test if the a pair of states could create the implied internal structure required by the rule
+                valid_state_tuple_list, valid_link_tuple_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
                 
                 # Associate any valid pairs of states 
-                for current_state_tuple in valid_state_tuple_list:
+                for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_tuple_list):
                     self._create_association(graph, *current_state_tuple)
                 
             elif current_rule.rule == ' dissociates_from ':
@@ -213,7 +216,7 @@ class Model(HasTraits):
             # If we arrive here, we have a match and we can short-circut the overall result
             return True
         
-        # If we arrive here, nothing matched after exhausting the list of reference sequences
+        # If we arrive here, nothing matched after exhausting the list of reference signatures
         else:
             return False
 
@@ -221,7 +224,7 @@ class Model(HasTraits):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
                      
-        # Create sorted lists of components/conformations for a possible associated state
+        # Create lists of components/conformations for a possible associated state
         sub_comp, sub_conf = subject_state.generate_component_list()
         obj_comp, obj_conf = object_state.generate_component_list()
         associated_component_list = sub_comp + obj_comp
@@ -238,12 +241,14 @@ class Model(HasTraits):
         else: # no break
             associated_state = bkcc.State()
             associated_state.add_component_list(associated_component_list, associated_conformation_list)
+            associated_state.internal_links = self._combine_internal_link_lists(subject_state, object_state)
+            
             
         # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
         graph.add_edge(subject_state, associated_state)
         graph.add_edge(object_state, associated_state)
             
-    def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = True):
+    def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link list from state 2 into that from state 1, assuming association of the two states
         
         # How many of each type of component are in each state
@@ -268,20 +273,30 @@ class Model(HasTraits):
         for old_index in range(num_2_drug, num_2_drug + num_2_protein):
             translate_2_to_12[old_index] = old_index + num_1_drug + num_1_protein
         
-        # Process each link list !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        def copy_tree(tree):
-    # generator expression - only run when consumed by tuple later on
-    children = (
-        copy_tree(child) if isinstance(child, tuple) else child
-        for child in tree
-    )
-    return tuple(children)
+        # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
+        def _translate_link_tuple(link_tuple, translate_dict):
+            children = (_translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
+                        else translate_dict[link_element] for link_element in link_tuple)
+            return tuple(children)
         
-        # Make 12 to 1 and 12 to 2 dictionaries, should be no problem since the entries are unique
-        translate_12_to_1 = {value: key for key, value in translate_1_to_12.items()}
-        translate_12_to_2 = {value: key for key, value in translate_2_to_12.items()}
-                    
-        pass
+        # Translate the link lists
+        translated_link_1_list = [_translate_link_tuple(link, translate_1_to_12) for link in state_1.internal_links]
+        translated_link_2_list = [_translate_link_tuple(link, translate_2_to_12) for link in state_2.internal_links]
+        translated_list = translated_link_1_list + translated_link_2_list
+        
+        # Return the requested information
+        if return_translation_dicts:
+            # Make 12 to 1 and 12 to 2 dictionaries
+            translate_12_to_1 = {value: key for key, value in translate_1_to_12.items()}
+            translate_12_to_2 = {value: key for key, value in translate_2_to_12.items()}
+            
+            return translated_list, [translate_1_to_12, translate_2_to_12, translate_12_to_1, translate_12_to_2]
+        else:
+            return translated_list
+
+    def _find_association_internal_link(self, rule, state_tuples):
+        pass        
+        return valid_state_tuples, valid_link_tuples
     
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
