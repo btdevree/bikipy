@@ -525,22 +525,60 @@ def test_combine_internal_link_lists_with_dicts(model_for_matching_tests, defaul
         translation_dicts[3][0]
         translation_dicts[3][2]
 
-# Test if the internal link finding/testing function returns the expected result        
+# Test if the internal link finding/testing function returns the expected result for a simple case       
 def test_find_association_internal_link(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
     
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    s1.internal_links = []
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[1]]
+    s2.internal_links = []
+    
+    # Run function
+    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
+    
+    # Compare outputs
+    assert test_state_tuples == [(s1, s2)]
+    assert test_link_list == [(0, 1)]
+    
+#    # Test if the internal link finding/testing function returns the expected result for a simple case       
+#def test_find_association_internal_link(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+#    mmt = model_for_matching_tests    
+#    dpi = default_Protein_instance
+#    ddi = default_Drug_instance # For typing convenience
+#    
 #    # Make some states
 #    s1 = bkcc.State()
 #    s1.required_drug_list = [ddi]
-#    s1.required_protein_list = [dpi]
-#    s1.req_protein_conf_lists = [[1]]
-#    s1.internal_links = [(0, 1)] # {AR(1)}
+#    s1.required_protein_list = []
+#    s1.req_protein_conf_lists = []
+#    s1.internal_links = []
 #    
 #    s2 = bkcc.State()
-#    s2.required_drug_list = [ddi]
-#    s2.required_protein_list = [dpi, dpi]
-#    s2.req_protein_conf_lists = [[0], [1]]
-#    s2.internal_links = [(0, 2)] # {AR(1)}R(0)
-    
+#    s2.required_drug_list = []
+#    s2.required_protein_list = [dpi]
+#    s2.req_protein_conf_lists = [[1]]
+#    s2.internal_links = []
+#    
+#    s3 = bkcc.State()
+#    s3.required_drug_list = [ddi]
+#    s3.required_protein_list = [dpi]
+#    s3.req_protein_conf_lists = [[1]]
+#    s3.internal_links = [(0, 1)] # {AR(1)}
+#    
+#    # Run function
+#    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
+#    
+#    # Compare outputs
+#    assert test_state_tuples == [(s1, s2)]
+#    assert test_link_list == [(0, 1)]

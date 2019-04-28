@@ -88,7 +88,7 @@ class Model(HasTraits):
                 
                 # Associate any valid pairs of states 
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_tuple_list):
-                    self._create_association(graph, *current_state_tuple)
+                    self._create_association(graph, current_state_tuple, valid_link_tuple_list)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -248,6 +248,12 @@ class Model(HasTraits):
         graph.add_edge(subject_state, associated_state)
         graph.add_edge(object_state, associated_state)
             
+    def _translate_link_tuple(self, link_tuple, translate_dict):
+        # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
+        children = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
+                    else translate_dict[link_element] for link_element in link_tuple)
+        return tuple(children)
+        
     def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link list from state 2 into that from state 1, assuming association of the two states
         
@@ -273,15 +279,9 @@ class Model(HasTraits):
         for old_index in range(num_2_drug, num_2_drug + num_2_protein):
             translate_2_to_12[old_index] = old_index + num_1_drug + num_1_protein
         
-        # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
-        def _translate_link_tuple(link_tuple, translate_dict):
-            children = (_translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
-                        else translate_dict[link_element] for link_element in link_tuple)
-            return tuple(children)
-        
         # Translate the link lists
-        translated_link_1_list = [_translate_link_tuple(link, translate_1_to_12) for link in state_1.internal_links]
-        translated_link_2_list = [_translate_link_tuple(link, translate_2_to_12) for link in state_2.internal_links]
+        translated_link_1_list = [self._translate_link_tuple(link, translate_1_to_12) for link in state_1.internal_links]
+        translated_link_2_list = [self._translate_link_tuple(link, translate_2_to_12) for link in state_2.internal_links]
         translated_list = translated_link_1_list + translated_link_2_list
         
         # Return the requested information
@@ -295,7 +295,64 @@ class Model(HasTraits):
             return translated_list
 
     def _find_association_internal_link(self, rule, state_tuples):
-        pass        
+        # Function to check if the pairs of states given can be associated to make the new internal link structure implied by the given rule
+        
+        # Check each pair of states
+        valid_state_tuples = []
+        valid_link_tuples = []
+        for state_pair in state_tuples:
+                                    
+           
+#            sub_comp, sub_conf = state_pair[0].generate_component_list()
+#            obj_comp, obj_conf = state_pair[1].generate_component_list()
+#            associated_component_list = sub_comp + obj_comp
+#            associated_conformation_list = sub_conf + obj_conf
+            
+            # We may have more than one component (or set of components) in each state that matches the rule, so find any that could apply 
+            matching_subject_indices = [[] for x in range(len(rule.rule_subject))]
+            for rule_comp_index, subject_matched_list in enumerate(matching_subject_indices):
+                for state_comp_index, (current_comp, current_conf) in enumerate(zip(*state_pair[0].generate_component_list())):
+        
+                    # Record if the state and rule components match
+                    if current_comp == rule.rule_subject[rule_comp_index] and (current_conf == rule.subject_conf[rule_comp_index] or rule.subject_conf[rule_comp_index] == []):
+                        subject_matched_list.append(state_comp_index)
+                        
+            # We may have more than one component in each state that matches the rule, so find any that could apply 
+            matching_object_indices = [[] for x in range(len(rule.rule_object))]
+            for rule_comp_index, object_matched_list in enumerate(matching_object_indices):
+                for state_comp_index, (current_comp, current_conf) in enumerate(zip(*state_pair[1].generate_component_list())):
+        
+                    # Record if the state and rule components match
+                    if current_comp == rule.rule_object[rule_comp_index] and (current_conf == rule.object_conf[rule_comp_index] or rule.object_conf[rule_comp_index] == []):
+                        object_matched_list.append(state_comp_index)
+                        
+            # Make all possible combinations of links with the found indices
+            subject_combos = itertools.product(*subject_matched_list)
+            object_combos = itertools.product(*object_matched_list)                    
+            
+            # Make the associated link index list and translation dictionaries
+            associated_old_link_list, translation_dicts = self._combine_internal_link_lists(state_pair[0], state_pair[1], True)
+            
+            # Now ask if we previously made this exact same link, and if so, reject the pair
+            for new_link_first_element, new_link_second_element in itertools.product(subject_combos, object_combos):
+                
+                # Translate into associated state indices
+                new_associated_link_first = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
+                new_associated_link_second = self._translate_link_tuple(new_link_second_element, translation_dicts[1])
+                
+                # Check if the first part of the new link is already linked with another component copy of the second part 
+                # Find any existing links
+                found_old_first_elements = []
+                found_old_second_elements = []
+                for old_link in associated_old_link_list:
+                    if old_link[0] =  new_associated_link_first
+                    
+                    # Try to find existing links including the old object
+                    
+                        
+            
+                   
+    
         return valid_state_tuples, valid_link_tuples
     
 # Model creation method

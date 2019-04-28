@@ -195,9 +195,9 @@ class Rule(HasTraits):
     
     # Create a list of possible component choices before completeing Traits initalization
     def __init__(self, model, *args, **kwargs):
-        self._components = [*model.drug_list, *model.protein_list]
-        self.add_trait('rule_subject', List(Enum(*self._components)))
-        self.add_trait('rule_object', List(Enum(*self._components))) 
+        self._possible_components = [*model.drug_list, *model.protein_list]
+        self.add_trait('rule_subject', List(Enum(*self._possible_components)))
+        self.add_trait('rule_object', List(Enum(*self._possible_components))) 
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
     
     # Method to check if the rule is valid
@@ -308,7 +308,6 @@ class Rule(HasTraits):
                 sub_comp, sub_conf = self.generate_component_list('subject')
                 obj_comp, obj_conf = self.generate_component_list('object')
                 third_state_comp = sub_comp + obj_comp
-                print('start!', sub_conf + obj_conf)
                 
                 # Find the "any" conformations
                 sub_any_index = []
@@ -348,12 +347,9 @@ class Rule(HasTraits):
                     
                     # Now create a signature from the lists
                     new_sig = CountingSignature('conformations included')
-                    print('components subject ', sub_comp,' old conf ', sub_conf,' new conf ', new_sub_conf)
                     new_sig.count_for_subject(sub_comp, new_sub_conf)
-                    print('components object ', obj_comp,' old conf ', obj_conf,' new conf ', new_obj_conf)
                     new_sig.count_for_object(obj_comp, new_obj_conf)
                     combinded_third_state_conf = new_sub_conf + new_obj_conf
-                    print('components third ', third_state_comp,' old conf ', sub_conf + obj_conf,' new conf ', combinded_third_state_conf)
                     new_sig.count_for_third_state(third_state_comp, combinded_third_state_conf)
                     signature_list.append(new_sig)
         
