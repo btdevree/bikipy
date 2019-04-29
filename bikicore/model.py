@@ -253,6 +253,32 @@ class Model(HasTraits):
         children = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
                     else translate_dict[link_element] for link_element in link_tuple)
         return tuple(children)
+    
+    def _combine_component_list(self, list1, list2):
+        # Adds component and conformation lists 
+         
+        # Add drugs and proteins seperately
+        drug_list = []
+        protein_list = []
+        drug_list.extend([x for x in list1 + list2 if isinstance(x, Drug)])
+        protein_list.extend([x for x in list1 + list2 if isinstance(x, Protein)])
+        return drug_list + protein_list
+    
+    def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, component_list):
+        # Generator expression to compare complex tuple trees by referenced component
+        
+        # Recursive testing if we have matching tuples instead of a single index value
+        if  isinstance(query_tuple_element, tuple) and isinstance(reference_tuple_element, tuple) and len(query_tuple_element) == len(reference_tuple_element):
+            return all(self._compare_components_linked_tuple_element(*elements, component_list) for elements in zip(query_tuple_element, reference_tuple_element))
+        
+        # If we have a single index value, test if they match
+        elif isinstance(query_tuple_element, int) and isinstance(reference_tuple_element, int):
+            return 
+        
+                
+        value = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
+                    else translate_dict[link_element] for link_element in link_tuple)
+        return tuple(children)
         
     def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link list from state 2 into that from state 1, assuming association of the two states
@@ -330,22 +356,36 @@ class Model(HasTraits):
             subject_combos = itertools.product(*subject_matched_list)
             object_combos = itertools.product(*object_matched_list)                    
             
-            # Make the associated link index list and translation dictionaries
+            # Make the associated link index list, translation dictionaries, and component list
             associated_old_link_list, translation_dicts = self._combine_internal_link_lists(state_pair[0], state_pair[1], True)
+            associated_component_list = state_pair
             
             # Now ask if we previously made this exact same link, and if so, reject the pair
             for new_link_first_element, new_link_second_element in itertools.product(subject_combos, object_combos):
                 
                 # Translate into associated state indices
-                new_associated_link_first = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
-                new_associated_link_second = self._translate_link_tuple(new_link_second_element, translation_dicts[1])
+                new_associated_link_first_element = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
+                new_associated_link_second_element = self._translate_link_tuple(new_link_second_element, translation_dicts[1])
                 
                 # Check if the first part of the new link is already linked with another component copy of the second part 
-                # Find any existing links
-                found_old_first_elements = []
-                found_old_second_elements = []
+                # Find anything linked to the first element
+                old_link_to_first_element = []
                 for old_link in associated_old_link_list:
-                    if old_link[0] =  new_associated_link_first
+                    if old_link[0] == new_associated_link_first_element:
+                        old_link_to_first_element.append(old_link[1])
+                    if old_link[1] == new_associated_link_first_element:
+                        old_link_to_first_element.append(old_link[0])
+                
+                # Check if anything has the same component structure as the new peice
+                for 
+                
+                # Find anything linked to the second element
+                old_link_to_second_element = []
+                for old_link in associated_old_link_list:
+                    if old_link[0] == new_associated_link_second_element:
+                        old_link_to_second_element.append(old_link[1])
+                    if old_link[1] == new_associated_link_second_element:
+                        old_link_to_second_element.append(old_link[0])
                     
                     # Try to find existing links including the old object
                     
