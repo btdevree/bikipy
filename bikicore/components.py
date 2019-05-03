@@ -58,15 +58,18 @@ class State(HasTraits):
     def autoname(self):
         pass
     
-    def generate_component_list(self):
+    def generate_component_list(self, return_conformations_only = False):
         # Returns a list of components and a list of conformations
         # The list is ordered all drugs first, then proteins
         
         # Concatenate lists of components and mark the drug conformations as None 
         component_sorted = [*self.required_drug_list, *self.required_protein_list]
-        conformation_sorted = [*itertools.repeat(None, len(self.required_drug_list)), *self.req_protein_conf_lists]
-        return component_sorted, conformation_sorted
-     
+        if not return_conformations_only:
+            conformation_sorted = [*itertools.repeat(None, len(self.required_drug_list)), *self.req_protein_conf_lists]
+            return component_sorted, conformation_sorted
+        elif return_conformations_only:
+            return component_sorted
+        
     def add_component_list(self, incoming_components, incoming_conformations):
         # Adds component and conformation lists to the state
          

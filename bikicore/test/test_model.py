@@ -397,7 +397,6 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     # Modify rule to give A + R([1]) --> AR([1]), get the signature
     mmt.rule_list[0].object_conf = [[1]]
     ref_sig = mmt.rule_list[0].generate_signature_list()
-    print(ref_sig[0].count_type)
     
     # Make some states
     s1 = bkcc.State()
@@ -427,8 +426,6 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     
     # Run function
     valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
-    print(valid_tuples)
-    print('s5', s5)
     
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
@@ -531,6 +528,8 @@ def test_find_association_internal_link(model_for_matching_tests, default_Protei
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
     
+    # Rule for drug association - "A associates with R([])"
+    
     # Make some states
     s1 = bkcc.State()
     s1.required_drug_list = [ddi]
@@ -551,34 +550,88 @@ def test_find_association_internal_link(model_for_matching_tests, default_Protei
     assert test_state_tuples == [(s1, s2)]
     assert test_link_list == [(0, 1)]
     
-#    # Test if the internal link finding/testing function returns the expected result for a simple case       
-#def test_find_association_internal_link(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
-#    mmt = model_for_matching_tests    
-#    dpi = default_Protein_instance
-#    ddi = default_Drug_instance # For typing convenience
-#    
-#    # Make some states
-#    s1 = bkcc.State()
-#    s1.required_drug_list = [ddi]
-#    s1.required_protein_list = []
-#    s1.req_protein_conf_lists = []
-#    s1.internal_links = []
-#    
-#    s2 = bkcc.State()
-#    s2.required_drug_list = []
-#    s2.required_protein_list = [dpi]
-#    s2.req_protein_conf_lists = [[1]]
-#    s2.internal_links = []
-#    
-#    s3 = bkcc.State()
-#    s3.required_drug_list = [ddi]
-#    s3.required_protein_list = [dpi]
-#    s3.req_protein_conf_lists = [[1]]
-#    s3.internal_links = [(0, 1)] # {AR(1)}
-#    
-#    # Run function
-#    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
-#    
-#    # Compare outputs
-#    assert test_state_tuples == [(s1, s2)]
-#    assert test_link_list == [(0, 1)]
+# Test if the internal link finding/testing function returns the expected result for a dimer case       
+def test_find_association_internal_link_dimers(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Rule for drug association - "A associates with R([])"
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    s1.internal_links = []
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[1], [0]]
+    s2.internal_links = [(0,1)]
+        
+    # Run function
+    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
+    
+    # Compare outputs
+    assert test_state_tuples == [(s1, s2), (s1, s2)]
+    assert test_link_list == [(0, 1), (0, 2)]
+    
+# Test if the internal link finding/testing function returns the expected result for a complex dimer case       
+def test_find_association_internal_link_dimer_already_bound(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Edit rule for drug association - "A associates with R([1])"
+    mmt.rule_list[0].object_conf = [[1]]
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    s1.internal_links = []
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = [ddi]
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[1], [0]]
+    s2.internal_links = [(1, 2), (0, 1)]
+        
+    # Run function
+    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
+    
+    # Compare outputs
+    assert test_state_tuples == []
+    assert test_link_list == []
+
+# Test if the internal link finding/testing function returns the expected result for a complex dimer case       
+def test_find_association_internal_link_dimer_open_for_binding(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
+    mmt = model_for_matching_tests    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Edit rule for drug association - "A associates with R([1])"
+    mmt.rule_list[0].object_conf = [[1]]
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    s1.internal_links = []
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = [ddi]
+    s2.required_protein_list = [dpi, dpi]
+    s2.req_protein_conf_lists = [[1], [1]]
+    s2.internal_links = [(1, 2), (0, 1)]
+        
+    # Run function
+    test_state_tuples, test_link_list = mmt._find_association_internal_link(mmt.rule_list[0], [(s1, s2)])
+    
+    # Compare outputs
+    assert test_state_tuples == [(s1, s2)]
+    assert test_link_list == [(0,3)]

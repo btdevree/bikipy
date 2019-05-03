@@ -171,6 +171,9 @@ class Model(HasTraits):
             if self._signature_match_association(test_signature, reference_signatures):
                 valid_pairs.append(current_tuple)
         
+        # Double check if the internal structure of these matches allows the association and calculate the new links
+        ##################### HERE ########################
+        
         # Give the list of tuples back
         return valid_pairs
     
@@ -250,9 +253,13 @@ class Model(HasTraits):
             
     def _translate_link_tuple(self, link_tuple, translate_dict):
         # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
-        children = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
-                    else translate_dict[link_element] for link_element in link_tuple)
-        return tuple(children)
+        if isinstance(link_tuple, int): # Need to handle a single integer element as well
+            children = translate_dict[link_tuple]
+            return children
+        else:
+            children = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
+                        else translate_dict[link_element] for link_element in link_tuple)
+            return tuple(children)
     
     def _combine_component_list(self, list1, list2):
         # Adds component and conformation lists 
@@ -260,8 +267,8 @@ class Model(HasTraits):
         # Add drugs and proteins seperately
         drug_list = []
         protein_list = []
-        drug_list.extend([x for x in list1 + list2 if isinstance(x, Drug)])
-        protein_list.extend([x for x in list1 + list2 if isinstance(x, Protein)])
+        drug_list.extend([x for x in list1 + list2 if isinstance(x, bkcc.Drug)])
+        protein_list.extend([x for x in list1 + list2 if isinstance(x, bkcc.Protein)])
         return drug_list + protein_list
     
     def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, component_list):
@@ -273,12 +280,11 @@ class Model(HasTraits):
         
         # If we have a single index value, test if they match
         elif isinstance(query_tuple_element, int) and isinstance(reference_tuple_element, int):
-            return 
+            return component_list[query_tuple_element] == component_list[reference_tuple_element]
         
-                
-        value = (self._translate_link_tuple(link_element, translate_dict) if isinstance(link_element, tuple)
-                    else translate_dict[link_element] for link_element in link_tuple)
-        return tuple(children)
+        # If neither are true, we are by definition a mismatch
+        else:
+            return False
         
     def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link list from state 2 into that from state 1, assuming association of the two states
@@ -327,18 +333,12 @@ class Model(HasTraits):
         valid_state_tuples = []
         valid_link_tuples = []
         for state_pair in state_tuples:
-                                    
-           
-#            sub_comp, sub_conf = state_pair[0].generate_component_list()
-#            obj_comp, obj_conf = state_pair[1].generate_component_list()
-#            associated_component_list = sub_comp + obj_comp
-#            associated_conformation_list = sub_conf + obj_conf
             
             # We may have more than one component (or set of components) in each state that matches the rule, so find any that could apply 
             matching_subject_indices = [[] for x in range(len(rule.rule_subject))]
             for rule_comp_index, subject_matched_list in enumerate(matching_subject_indices):
                 for state_comp_index, (current_comp, current_conf) in enumerate(zip(*state_pair[0].generate_component_list())):
-        
+                    
                     # Record if the state and rule components match
                     if current_comp == rule.rule_subject[rule_comp_index] and (current_conf == rule.subject_conf[rule_comp_index] or rule.subject_conf[rule_comp_index] == []):
                         subject_matched_list.append(state_comp_index)
@@ -353,46 +353,68 @@ class Model(HasTraits):
                         object_matched_list.append(state_comp_index)
                         
             # Make all possible combinations of links with the found indices
-            subject_combos = itertools.product(*subject_matched_list)
-            object_combos = itertools.product(*object_matched_list)                    
+            subject_combos = itertools.product(*matching_subject_indices)
+            object_combos = itertools.product(*matching_object_indices)                    
             
             # Make the associated link index list, translation dictionaries, and component list
             associated_old_link_list, translation_dicts = self._combine_internal_link_lists(state_pair[0], state_pair[1], True)
-            associated_component_list = state_pair
+            associated_component_list = self._combine_component_list(state_pair[0].generate_component_list(True), state_pair[1].generate_component_list(True))
             
             # Now ask if we previously made this exact same link, and if so, reject the pair
+            valid_first_elements = []
+            valid_second_elements = []
+
+            #for newlink in itertools.product(subject_combos, object_combos):
             for new_link_first_element, new_link_second_element in itertools.product(subject_combos, object_combos):
+ 
+                # If the element is a singleton tuple, convert it to a number
+                if len(new_link_first_element) == 1:
+                    new_link_first_element = new_link_first_element[0]
+                if len(new_link_second_element) == 1:
+                    new_link_second_element = new_link_second_element[0]
+                    
                 
                 # Translate into associated state indices
                 new_associated_link_first_element = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
                 new_associated_link_second_element = self._translate_link_tuple(new_link_second_element, translation_dicts[1])
-                
+               
                 # Check if the first part of the new link is already linked with another component copy of the second part 
                 # Find anything linked to the first element
-                old_link_to_first_element = []
+                old_link_element_to_first_element = []
                 for old_link in associated_old_link_list:
                     if old_link[0] == new_associated_link_first_element:
-                        old_link_to_first_element.append(old_link[1])
+                        old_link_element_to_first_element.append(old_link[1])
                     if old_link[1] == new_associated_link_first_element:
-                        old_link_to_first_element.append(old_link[0])
+                        old_link_element_to_first_element.append(old_link[0])
                 
                 # Check if anything has the same component structure as the new peice
-                for 
-                
-                # Find anything linked to the second element
-                old_link_to_second_element = []
-                for old_link in associated_old_link_list:
-                    if old_link[0] == new_associated_link_second_element:
-                        old_link_to_second_element.append(old_link[1])
-                    if old_link[1] == new_associated_link_second_element:
-                        old_link_to_second_element.append(old_link[0])
-                    
-                    # Try to find existing links including the old object
-                    
+                old_link_found = []
+                for old_link_element in old_link_element_to_first_element:
+                    old_link_found.append(self._compare_components_linked_tuple_element(old_link_element, new_associated_link_second_element, associated_component_list))
                         
+                # Find anything linked to the second element
+                old_link_element_to_second_element = []
+                for old_link_element in associated_old_link_list:
+                    if old_link[0] == new_associated_link_second_element:
+                        old_link_element_to_second_element.append(old_link[1])
+                    if old_link[1] == new_associated_link_second_element:
+                        old_link_element_to_second_element.append(old_link[0])
+                
+                # Check if anything has the same component structure as the new peice
+                for old_link_element in old_link_element_to_second_element:
+                    old_link_found.append(self._compare_components_linked_tuple_element(old_link_element, new_associated_link_first_element, associated_component_list))
             
-                   
-    
+                # We should be able to use any links that haven't been formed already
+                if not any(old_link_found):
+                    valid_first_elements.append(new_associated_link_first_element)
+                    valid_second_elements.append(new_associated_link_second_element)
+            
+            # Any valid link element combos should be made into a new link
+            for first_element, second_element in zip(valid_first_elements, valid_second_elements):
+                valid_state_tuples.append(state_pair)
+                valid_link_tuples.append((first_element, second_element))
+
+        # Send back the list of things that should work
         return valid_state_tuples, valid_link_tuples
     
 # Model creation method
