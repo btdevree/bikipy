@@ -98,7 +98,7 @@ def test_Model_generate_network_null(default_Model_instance):
     dmi.generate_network()
     
     # Create comparision graph shape
-    testgraph = nx.DiGraph([])
+    testgraph = nx.DiGraph()
     testgraph.add_nodes_from([1,2])
     
     # Compare shape of graph
@@ -114,7 +114,7 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     r1.subject_conf = [None]
     r1.rule = ' associates with '
     r1.rule_object = [dmi.protein_list[0]]
-    r1.object_conf = [[0,1]]
+    r1.object_conf = [[]]
     r1.check_rule_traits()
     
     # Attach rule to model and generate network
@@ -388,7 +388,7 @@ def test_find_association_pairs(model_for_matching_tests, default_Protein_instan
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
     
-# Test that we return valid state pairs with a conformation signature
+# Test that we return valid state pairs with a conformation signature. NOTE Signature matching is not quite sufficient
 def test_find_association_pairs_with_conformation(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
     dpi = default_Protein_instance
@@ -410,6 +410,7 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     s3.required_drug_list = [ddi]
     s3.required_protein_list = [dpi]
     s3.req_protein_conf_lists = [[1]]
+    s3.internal_links = [(0,1)]
     
     s4 = bkcc.State()
     s4.required_protein_list = [dpi]
@@ -419,13 +420,15 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     s5.required_drug_list = [ddi]
     s5.required_protein_list = [dpi]
     s5.req_protein_conf_lists = [[0]]
+    s5.internal_links = [(0,1)]
     
     # Make some state lists (not all these should actually be identified by the matching code, but should be rejected nontheless)
-    test_sub_list = [s1, s3, s4, s5]
-    test_obj_list = [s2, s3, s4, s5]
+    test_sub_list = [s1, s2, s3, s4, s5]
+    test_obj_list = [s1, s2, s3, s4, s5]
     
-    # Run function
-    valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
+    # Run functions - need an additional internal link check to get the desired behavior
+    signature_valid_tuples = mmt._find_association_pairs(ref_sig, test_sub_list, test_obj_list)
+    valid_tuples, link_list = mmt._find_association_internal_link(mmt.rule_list[0], signature_valid_tuples)
     
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]

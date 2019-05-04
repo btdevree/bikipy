@@ -84,11 +84,11 @@ class Model(HasTraits):
                 possible_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
                 
                 # Test if the a pair of states could create the implied internal structure required by the rule
-                valid_state_tuple_list, valid_link_tuple_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
+                valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
                 
                 # Associate any valid pairs of states 
-                for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_tuple_list):
-                    self._create_association(graph, current_state_tuple, valid_link_tuple_list)
+                for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
+                    self._create_association(graph, *current_state_tuple, valid_link_list)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -171,9 +171,6 @@ class Model(HasTraits):
             if self._signature_match_association(test_signature, reference_signatures):
                 valid_pairs.append(current_tuple)
         
-        # Double check if the internal structure of these matches allows the association and calculate the new links
-        ##################### HERE ########################
-        
         # Give the list of tuples back
         return valid_pairs
     
@@ -223,7 +220,7 @@ class Model(HasTraits):
         else:
             return False
 
-    def _create_association(self, graph, subject_state, object_state):
+    def _create_association(self, graph, subject_state, object_state, new_link):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
                      
@@ -326,13 +323,13 @@ class Model(HasTraits):
         else:
             return translated_list
 
-    def _find_association_internal_link(self, rule, state_tuples):
+    def _find_association_internal_link(self, rule, state_pairs):
         # Function to check if the pairs of states given can be associated to make the new internal link structure implied by the given rule
         
         # Check each pair of states
         valid_state_tuples = []
         valid_link_tuples = []
-        for state_pair in state_tuples:
+        for state_pair in state_pairs:
             
             # We may have more than one component (or set of components) in each state that matches the rule, so find any that could apply 
             matching_subject_indices = [[] for x in range(len(rule.rule_subject))]
