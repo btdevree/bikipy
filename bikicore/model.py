@@ -46,7 +46,7 @@ class Model(HasTraits):
             new_state = bkcc.State()
             new_state.required_drug_list = [current_component]
             new_state.required_protein_list = []
-            new_state.req_protein_conf_lists = [[]]
+            new_state.req_protein_conf_lists = []
             self.network.main_graph.add_node(new_state)
         for current_component in self.protein_list:
             new_state = bkcc.State()
@@ -85,10 +85,9 @@ class Model(HasTraits):
                 
                 # Test if the a pair of states could create the implied internal structure required by the rule
                 valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
-                
                 # Associate any valid pairs of states 
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
-                    self._create_association(graph, *current_state_tuple, valid_link_list)
+                    self._create_association(graph, *current_state_tuple, current_link_tuple)
                 
             elif current_rule.rule == ' dissociates_from ':
                 pass
@@ -104,22 +103,48 @@ class Model(HasTraits):
         # Iterate through all the graph's states and add them to the lists if they match
         matching_states = []
         for current_state in self.network.main_graph.__iter__():
-            if self._state_match_to_component_lists(current_state, rule_components, rule_conformations, 'minimal'):
+            if self._state_match_to_component_lists(current_state, rule_components, rule_conformations, [], 'minimal'): # We do not worry about links here
                 matching_states.append(current_state)
 
         # Give the list back to the calling method
         return matching_states
    
-    def _state_match_to_component_lists(self, query_state, reference_component_list, reference_conformation_list, match = 'exact'):
+    def _state_match_to_component_lists(self, query_state, reference_component_list, reference_conformation_list, reference_link_list, match = 'exact'):
         # Helper function that asks if a given query state contains the components given in the reference lists
         # Returns True or False
         # Use modes:
         #   match = 'exact': returns true if and only if the query state contains all the reference components, and no extra components
         #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well
         
+        # NOTE: The link checking won't work properly with "any" ([]) conformation - Try to fix design in the future
+        
+        # Get the link list that the state requires
+        remaining_links = query_state.internal_links.copy()
+        
+        # Loop through all remaining links for each query link
+        for current_link_element1, current_link_element2 in reference_link_list: 
+            for i, current_query_links in enumerate(remaining_links):
+                
+                # Ask if the query and reference in the normal order match
+                found_match = False
+                if self._compare_components_linked_tuple_element(current_query_links, (current_link_element1, current_link_element2), reference_component_list, reference_conformation_list):
+                    found_match = True
+                # Ask if the query and reference in the reversed order match
+                elif self._compare_components_linked_tuple_element(current_query_links, (current_link_element2, current_link_element1), reference_component_list, reference_conformation_list):
+                    found_match = True
+                
+                #Consume the reference match
+                if found_match:
+                    del remaining_links[i]
+                    break 
+            
+            else: #no break
+                # If we arrive here, there was not a matching link
+                return False # Short-circut answer
+
         # Get the components and conformations that the state requires
         remaining_components, remaining_conformations = query_state.generate_component_list()
-
+        
         # Loop through all remaining reference components for each query component
         for current_ref_comp, current_ref_conf in zip(reference_component_list, reference_conformation_list): 
             for i, (current_query_comp, current_query_conf) in enumerate(zip(remaining_components, remaining_conformations)):
@@ -137,16 +162,18 @@ class Model(HasTraits):
                 # If we arrive here, there was not a matching query component/conformation for a reference component/conformation
                 return False # Short-circut answer
             
-        # If we arrive here, matches for all query and references components/conformations were found
+        # If we arrive here, matches for all query and references components/conformations/links were found
         # If mode is 'minimal', this means there's a match
         if match == 'minimal':
             return True
+        
         # Otherwise, we need to make sure we completely consumed the reference lists
         elif match == 'exact':
-            if remaining_components == [] and remaining_conformations == []:
+            if remaining_components == [] and remaining_conformations == [] and remaining_links == []:
                 return True
             else:
                 return False
+        
         # No other match modes supported, raise error
         else:
             raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
@@ -223,16 +250,19 @@ class Model(HasTraits):
     def _create_association(self, graph, subject_state, object_state, new_link):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
+        # New link must be given for components in the assocated state 
                      
         # Create lists of components/conformations for a possible associated state
         sub_comp, sub_conf = subject_state.generate_component_list()
         obj_comp, obj_conf = object_state.generate_component_list()
         associated_component_list = sub_comp + obj_comp
         associated_conformation_list = sub_conf + obj_conf
+        associated_old_links = self._combine_internal_link_lists(subject_state, object_state)
+        associated_links = associated_old_links + [new_link]
                 
         # See if this possible state already exists in the graph
         for current_state in graph.__iter__():
-            if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, match = 'exact'):
+            if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, associated_links, match = 'exact'):
                 # If the state already exists, use it
                 associated_state = current_state
                 break
@@ -241,8 +271,7 @@ class Model(HasTraits):
         else: # no break
             associated_state = bkcc.State()
             associated_state.add_component_list(associated_component_list, associated_conformation_list)
-            associated_state.internal_links = self._combine_internal_link_lists(subject_state, object_state)
-            
+            associated_state.internal_links = associated_links
             
         # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
         graph.add_edge(subject_state, associated_state)
@@ -268,16 +297,24 @@ class Model(HasTraits):
         protein_list.extend([x for x in list1 + list2 if isinstance(x, bkcc.Protein)])
         return drug_list + protein_list
     
-    def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, component_list):
+    def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, component_list, conformation_list = []):
         # Generator expression to compare complex tuple trees by referenced component
+        
+        # NOTE: conformation testing would not work as intended with the "any" ([]) conformation - fix in future redesign
         
         # Recursive testing if we have matching tuples instead of a single index value
         if  isinstance(query_tuple_element, tuple) and isinstance(reference_tuple_element, tuple) and len(query_tuple_element) == len(reference_tuple_element):
-            return all(self._compare_components_linked_tuple_element(*elements, component_list) for elements in zip(query_tuple_element, reference_tuple_element))
+            if conformation_list == []: # No conformations
+                return all(self._compare_components_linked_tuple_element(*elements, component_list) for elements in zip(query_tuple_element, reference_tuple_element))
+            else:
+                return all(self._compare_components_linked_tuple_element(*elements, component_list, conformation_list) for elements in zip(query_tuple_element, reference_tuple_element))
         
         # If we have a single index value, test if they match
         elif isinstance(query_tuple_element, int) and isinstance(reference_tuple_element, int):
-            return component_list[query_tuple_element] == component_list[reference_tuple_element]
+            if conformation_list == []: # No conformations
+                return component_list[query_tuple_element] == component_list[reference_tuple_element]
+            else:
+                return component_list[query_tuple_element] == component_list[reference_tuple_element] and conformation_list[query_tuple_element] == conformation_list[reference_tuple_element]
         
         # If neither are true, we are by definition a mismatch
         else:
