@@ -89,7 +89,26 @@ class Model(HasTraits):
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
                     self._create_association(graph, *current_state_tuple, current_link_tuple)
                 
+            # Irreversable disassociation
             elif current_rule.rule == ' dissociates_from ':
+                
+                # Get a list of accecptable signatures for the rule and read which type of signature we need
+                reference_signatures = current_rule.generate_signature_list()
+                
+                # Find states that fit the rule discription
+                matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
+                matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
+                
+                # Find the possible pairings of subject and object states that create valid signatures
+                possible_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
+                
+                # Test if the a pair of states could create the implied internal structure required by the rule
+                valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
+                # Associate any valid pairs of states 
+                for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
+                    self._create_association(graph, *current_state_tuple, current_link_tuple)
+            
+            elif current_rule.rule == ' reversibly associates with ':
                 pass
     
     def _find_states_that_match_rule(self, rule, what_to_find):
@@ -212,7 +231,7 @@ class Model(HasTraits):
         
         # Work through each reference signature until we find one that works
         for refsig in reference_signatures:
-            
+
             # These are the keys we are looking for, anything else is just extra that we ignore
             refkeys = refsig.third_state_count.keys()
             

@@ -285,7 +285,8 @@ class Rule(HasTraits):
        
         # Make new list
         signature_list = []
-        
+        print('ARRIVED HERE')
+        print('These are found', *signature_list)
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
         if self.rule == ' associates with ':
                 
@@ -312,51 +313,105 @@ class Rule(HasTraits):
                 obj_comp, obj_conf = self.generate_component_list('object')
                 third_state_comp = sub_comp + obj_comp
                 
-                # Find the "any" conformations
-                sub_any_index = []
-                for index, current_conf in enumerate(sub_conf):
-                    if current_conf == []:
-                        sub_any_index.append(index)
-                obj_any_index = []
-                for index, current_conf in enumerate(obj_conf):
-                    if current_conf == []:
-                        obj_any_index.append(index)                
+                # Get all the possible conformation combinations that can be made
+                new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
                 
-                # Get the number of allowed conformations for each "any"
-                allowed_conformations = []
-                for sub_index in sub_any_index:
-                    allowed_conformations.append(range(len(sub_comp[sub_index].conformation_names)))
-                for obj_index in obj_any_index:
-                    allowed_conformations.append(range(len(obj_comp[obj_index].conformation_names)))
-                
-                # Get all combinations of each allowed list
-                allowed_conf_combos = []
-                for allowed_conf in allowed_conformations: # Do this for each list of "any" conformations
-                    new_combos = []
-                    for num_conf in range(1, len(allowed_conf) + 1): # Need to repeat for single, double, etc. allowed number of conformations
-                        new_combos.extend(itertools.combinations(allowed_conf, num_conf))
-                    allowed_conf_combos.append(new_combos) # Add the list of combos to the main list
-                
-                # Now we construct a signature for each combination
-                for comboset in itertools.product(*allowed_conf_combos):
-                    
-                    # We need to replace the "any" conformations in the conformation lists
-                    new_sub_conf = sub_conf.copy()
-                    for combo_index, sub_index in enumerate(sub_any_index):
-                        new_sub_conf[sub_index] = comboset[combo_index]
-                    new_obj_conf = obj_conf.copy()
-                    for combo_index, obj_index in enumerate(obj_any_index):
-                        new_obj_conf[obj_index] = comboset[combo_index + len(sub_any_index)]
-                    
-                    # Now create a signature from the lists
+                # Now create signatures from the lists                   
+                for new_sub_conf, new_obj_conf in zip(new_sub_conf_list, new_obj_conf_list):
                     new_sig = CountingSignature('conformations included')
                     new_sig.count_for_subject(sub_comp, new_sub_conf)
                     new_sig.count_for_object(obj_comp, new_obj_conf)
                     combinded_third_state_conf = new_sub_conf + new_obj_conf
                     new_sig.count_for_third_state(third_state_comp, combinded_third_state_conf)
                     signature_list.append(new_sig)
+                    
+        # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
+        elif self.rule == ' dissociates from ':
+                
+            # If we have all None or [] conformations, this is pretty simple and we return a component only signature
+            if all([x == None or x == [] for x in self.object_conf]):
+                new_sig = CountingSignature('components only')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                new_sig.third_state_count = new_sig.object_count - new_sig.subject_count
+                signature_list.append(new_sig)
+            
+            # If we have to worry about about conformations, but there is no "any" conformations ([]), this is also pretty simple
+            elif all([x != [] for x in self.subject_conf]) and all([x != [] for x in self.object_conf]):
+                new_sig = CountingSignature('conformations included')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                new_sig.third_state_count = new_sig.object_count - new_sig.subject_count
+                signature_list.append(new_sig)
+           
+            # We must have at least one "any" conformation but not all, so we make a list of all possible conformations that could fit the rule
+            else:
+                # Save the lists of components/conformations
+                sub_comp, sub_conf = self.generate_component_list('subject')
+                obj_comp, obj_conf = self.generate_component_list('object')
+                
+                # Get all the possible conformation combinations that can be made
+                new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
+                
+                # Now create signatures from the lists                   
+                for new_sub_conf, new_obj_conf in zip(new_sub_conf_list, new_obj_conf_list):
+                    new_sig = CountingSignature('conformations included')
+                    new_sig.count_for_subject(sub_comp, new_sub_conf)
+                    new_sig.count_for_object(obj_comp, new_obj_conf)
+                    new_sig.third_state_count = new_sig.object_count - new_sig.subject_count
+                    signature_list.append(new_sig)
+        else:
+            pass
         
+        print('These are found', *signature_list)
         return signature_list
+    
+    def _get_all_conformation_combinations(self, sub_conf, obj_conf, sub_comp, obj_comp):
+    # Helper method to find all possible combinations of conformations when there is at least one "any" conformation given 
+        
+    # Find the "any" conformations
+        sub_any_index = []
+        for index, current_conf in enumerate(sub_conf):
+            if current_conf == []:
+                sub_any_index.append(index)
+        obj_any_index = []
+        for index, current_conf in enumerate(obj_conf):
+            if current_conf == []:
+                obj_any_index.append(index)                
+        
+        # Get the number of allowed conformations for each "any"
+        allowed_conformations = []
+        for sub_index in sub_any_index:
+            allowed_conformations.append(range(len(sub_comp[sub_index].conformation_names)))
+        for obj_index in obj_any_index:
+            allowed_conformations.append(range(len(obj_comp[obj_index].conformation_names)))
+        
+        # Get all combinations of each allowed list
+        allowed_conf_combos = []
+        for allowed_conf in allowed_conformations: # Do this for each list of "any" conformations
+            new_combos = []
+            for num_conf in range(1, len(allowed_conf) + 1): # Need to repeat for single, double, etc. allowed number of conformations
+                new_combos.extend(itertools.combinations(allowed_conf, num_conf))
+            allowed_conf_combos.append(new_combos) # Add the list of combos to the main list
+        
+        # Now we construct a list of conformations lists for each combination
+        new_sub_conf_list = []
+        new_obj_conf_list = []
+        for comboset in itertools.product(*allowed_conf_combos):
+            
+            # We need to replace the "any" conformations in the conformation lists
+            new_sub_conf = sub_conf.copy()
+            for combo_index, sub_index in enumerate(sub_any_index):
+                new_sub_conf[sub_index] = comboset[combo_index]
+            new_obj_conf = obj_conf.copy()
+            for combo_index, obj_index in enumerate(obj_any_index):
+                new_obj_conf[obj_index] = comboset[combo_index + len(sub_any_index)]
+                
+            # Add to lists
+            new_sub_conf_list.append(new_sub_conf)
+            new_obj_conf_list.append(new_obj_conf)
+                
+        return new_sub_conf_list, new_obj_conf_list
 
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet

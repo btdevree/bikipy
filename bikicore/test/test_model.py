@@ -164,8 +164,35 @@ def test_Model_generate_network_Irr_association_dimers(model_for_matching_tests)
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
+    
+# Test that the 'associates with' rule creates a valid shaped graph 
+def test_Model_generate_network_disassociation(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup rule for simple drug association - "A disassociates from AR"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [dmi.drug_list[0], dmi.protein_list[0]]
+    r1.object_conf = [None, []]
+    r1.check_rule_traits()
+    
+    #NOTE - Add a checking rule to ' disassociates from ' rule to prevent a subject that is not included in the object 
+    
+    # Attach rule to model and generate network
+    dmi.rule_list = [r1]
+    dmi.generate_network()
+    
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_edges_from([(3,1), (3,2)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
    
-# -- Helper method tests in model.py --    
+# --------------------- Helper method tests in model.py ---------------------------    
             
 # Test for creation methods
 def test_create_new(default_Model_list):
