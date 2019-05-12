@@ -96,11 +96,10 @@ class Model(HasTraits):
                 reference_signatures = current_rule.generate_signature_list()
                 
                 # Find states that fit the rule discription
-                matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
                 # Find the possible pairings of subject and object states that create valid signatures
-                possible_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
+                possible_state_tuple_list = self._find_dissociation_pairs(reference_signatures, matching_object_states)
                 
                 # Test if the a pair of states could create the implied internal structure required by the rule
                 valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
@@ -219,7 +218,7 @@ class Model(HasTraits):
         
         # Give the list of tuples back
         return valid_pairs
-    
+ 
     def _signature_match_association(self, query_signature, reference_signatures):
         # Helper function that asks if a given query signature matches (any of) the reference signatures in an association context 
         # Returns True or False
@@ -261,6 +260,60 @@ class Model(HasTraits):
             
             # If we arrive here, we have a match and we can short-circut the overall result
             return True
+        
+        # If we arrive here, nothing matched after exhausting the list of reference signatures
+        else:
+            return False
+      
+    def _find_dissociation_pairs(self, reference_signatures, matching_object_states):
+        # Function that returns a list of 2-tuples containing a tuple of indices to split off as subject and a object state for a dissociation reaction
+        
+        # Get the type of signatures required
+        count_type = reference_signatures[0].count_type
+        
+        # Loop through all the found object states and store any valid splitting of components
+        valid_pairs = []
+        for current_obj in matching_object_states:
+            obj_comp_list, obj_conf_list = current_obj.generate_component_list()
+            
+            # Need to split the object state into all possible subject & third states
+            split_indices = []
+            for num_indices in range(1, len(obj_comp_list)): # Need to repeat for single, double, etc. allowed number of conformations
+                split_indices.extend(itertools.combinations(range(0, len(obj_comp_list), num_indices)))
+            
+            # Create a signature from each possible splitting
+            for current_split in split_indices:
+                test_signature = bkcc.CountingSignature(count_type, object_state = current_obj)
+                test_sub_comp = [obj_comp_list[x] for x in current_split]
+                test_sub_conf = [obj_conf_list[x] for x in current_split]
+                test_signature.count_for_subject(test_sub_comp, test_sub_conf)
+                test_signature.third_state_count = test_signature.object_count - test_signature.subject_count
+                
+                # See if the test signature matches with any of the reference ones
+                if self._signature_match_dissociation(test_signature, reference_signatures):
+                    valid_pairs.append(current_obj, current_split)
+        
+        # Give the list of tuples back
+        return valid_pairs
+          
+    def _signature_match_dissociation(self, query_signature, reference_signatures):
+        # Helper function that asks if a given query signature matches (any of) the reference signatures in dissociation context 
+        # Returns True or False
+        # "reference_signature" can be a single signature or a list of signatures (from "conformation included" signatures computed from rule)
+        
+        # Make sure we have a list of references
+        if not isinstance(reference_signatures, list):
+            reference_signatures = [reference_signatures]
+        
+        # Work through each reference signature until we find one that works
+        for refsig in reference_signatures:
+
+            # These are the keys we are looking for, anything else is just extra that we ignore
+            refkeys = refsig.object_count.keys()
+
+            # Check if the subject part of the signature matches the rule, and if so, short-circut the overall result
+            if all([query_signature.subject_count[key] == refsig.subject_count[key] for key in refkeys]):
+                return True
         
         # If we arrive here, nothing matched after exhausting the list of reference signatures
         else:

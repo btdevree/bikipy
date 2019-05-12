@@ -58,16 +58,16 @@ class State(HasTraits):
     def autoname(self):
         pass
     
-    def generate_component_list(self, return_conformations_only = False):
+    def generate_component_list(self, return_components_only = False):
         # Returns a list of components and a list of conformations
         # The list is ordered all drugs first, then proteins
         
         # Concatenate lists of components and mark the drug conformations as None 
         component_sorted = [*self.required_drug_list, *self.required_protein_list]
-        if not return_conformations_only:
+        if not return_components_only:
             conformation_sorted = [*itertools.repeat(None, len(self.required_drug_list)), *self.req_protein_conf_lists]
             return component_sorted, conformation_sorted
-        elif return_conformations_only:
+        elif return_components_only:
             return component_sorted
         
     def add_component_list(self, incoming_components, incoming_conformations):
@@ -238,6 +238,14 @@ class Rule(HasTraits):
                 if current_object_conf != None and any(index >= len(current_object.conformation_names) for index in current_object_conf):
                     raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
                     
+        if self.rule == ' dissociates from ':
+            check_signature = CountingSignature('conformations included')
+            check_signature.count_for_subject(self.rule_subject, self.subject_conf)
+            check_signature.count_for_object(self.rule_object, self.object_conf)
+            check_signature.third_state_count = check_signature.object_count - check_signature.subject_count
+            if not check_signature.object_count == check_signature.third_state_count + check_signature.subject_count:
+                raise RuleNotValidError('Dissociation rules require that the components in the subject state be fully included in the object state')
+    
     # Method returns the components involved in the rule as a standardized list
     def generate_component_list(self, what_to_include = 'both'):
         # Returns a list of components and a list of conformations
@@ -285,8 +293,6 @@ class Rule(HasTraits):
        
         # Make new list
         signature_list = []
-        print('ARRIVED HERE')
-        print('These are found', *signature_list)
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
         if self.rule == ' associates with ':
                 
@@ -349,7 +355,6 @@ class Rule(HasTraits):
                 # Save the lists of components/conformations
                 sub_comp, sub_conf = self.generate_component_list('subject')
                 obj_comp, obj_conf = self.generate_component_list('object')
-                
                 # Get all the possible conformation combinations that can be made
                 new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
                 
@@ -358,12 +363,12 @@ class Rule(HasTraits):
                     new_sig = CountingSignature('conformations included')
                     new_sig.count_for_subject(sub_comp, new_sub_conf)
                     new_sig.count_for_object(obj_comp, new_obj_conf)
-                    new_sig.third_state_count = new_sig.object_count - new_sig.subject_count
-                    signature_list.append(new_sig)
+                    new_sig.third_state_count = new_sig.object_count - new_sig.subject_count # On a counter object, subtracting something that doesn't exist is silently allowed and does not create "negative" objects
+                    if new_sig.object_count == new_sig.subject_count + new_sig.third_state_count: # We filter out mismatched subject and object conformations here
+                        signature_list.append(new_sig)
         else:
             pass
-        
-        print('These are found', *signature_list)
+
         return signature_list
     
     def _get_all_conformation_combinations(self, sub_conf, obj_conf, sub_comp, obj_comp):
@@ -412,7 +417,7 @@ class Rule(HasTraits):
             new_obj_conf_list.append(new_obj_conf)
                 
         return new_sub_conf_list, new_obj_conf_list
-
+    
 # Define class as a container for the network graphs of states
 # Do we really want a seperate container that's just added onto a Model class? Don't know yet
 class Network(HasTraits):

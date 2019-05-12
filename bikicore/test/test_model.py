@@ -178,8 +178,6 @@ def test_Model_generate_network_disassociation(default_Model_instance):
     r1.object_conf = [None, []]
     r1.check_rule_traits()
     
-    #NOTE - Add a checking rule to ' disassociates from ' rule to prevent a subject that is not included in the object 
-    
     # Attach rule to model and generate network
     dmi.rule_list = [r1]
     dmi.generate_network()
@@ -459,6 +457,48 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
+
+# Test that we return valid state pairs with a simple signature
+def test_find_dissociation_pairs(default_Model_instance, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    #Setup rule for simple drug disassociation - "A disassociates from AR"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [ddi]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [ddi, dpi]
+    r1.object_conf = [None, []]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    
+    # Get the signature
+    ref_sig = r1.generate_signature_list()
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State()
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0,1]]
+    
+    s3 = bkcc.State()
+    s3.required_drug_list = [ddi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[0,1]]
+    
+    # Make some state lists
+    test_sub_list = [s1, s2, s3]
+    test_obj_list = [s1, s2, s3]
+    
+    # Run function
+    valid_tuples = dmi._find_dissociation_pairs(ref_sig, test_sub_list, test_obj_list)
+    print(valid_tuples)
+    # Check if we got the expected result
+    assert valid_tuples == [(s1, s3), (s2, s3)]
 
 # Test for correct translation of link lists
 def test_combine_internal_link_lists(model_for_matching_tests, default_Protein_instance, default_Drug_instance):

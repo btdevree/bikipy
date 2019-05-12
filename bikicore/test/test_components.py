@@ -80,6 +80,22 @@ def default_Model_irreversable_association(default_Model_instance):
     dmi.rule_list = [r1]
     return dmi
 
+# Create a default model with configured Rule object for reuse in tests
+@pytest.fixture()
+def default_Model_irreversable_dissociation(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup testing rule for a correct drug dissociation - "A dissociates from AR([])"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [dmi.drug_list[0], dmi.protein_list[0]]
+    r1.object_conf = [None, []]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    return dmi
+
 # Create a default Rule object for reuse in tests
 @pytest.fixture()
 def default_Rule_instance(default_Model_instance):
@@ -444,6 +460,35 @@ def test_Rule_check_protein_object13(default_Rule_instance, default_Protein_inst
     with pytest.raises(RuleNotValidError):
         dri.check_rule_traits() # Error expected
 
+def test_Rule_check_correct_dissociation(default_Model_instance, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+
+    #Setup testing rule for a correct drug dissociation - "A dissociates from AR([])"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [ddi]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [ddi, dpi]
+    r1.object_conf = [None, []]
+    r1.check_rule_traits()
+        
+def test_Rule_check_incorrect_dissociation(default_Model_instance, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+
+    #Setup testing rule for incorrect drug dissociation - "A dissociates from R([])"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [ddi]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [dpi]
+    r1.object_conf = [[]]
+    with pytest.raises(RuleNotValidError):
+        r1.check_rule_traits()
+
 # Test if the generate_component_list gives back a correctly ordered list
 def test_generate_component_list_rule(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_irreversable_association
@@ -469,7 +514,7 @@ def test_generate_component_list_rule(default_Model_irreversable_association, de
     assert returned_conformations == expected_conformations
 
 # Test if the generate_signature_list gives back a 'components only' signature
-def test_generate_signature_list_components_only(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
+def test_generate_signature_list_components_only_association(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_irreversable_association
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
@@ -491,7 +536,7 @@ def test_generate_signature_list_components_only(default_Model_irreversable_asso
     assert sig_list[0].third_state_count[dpi] == 1
 
 # Test if the generate_signature_list gives back a 'conformations included' signature
-def test_generate_signature_list_conformations_included(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
+def test_generate_signature_list_conformations_included_association(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_irreversable_association
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
@@ -514,7 +559,7 @@ def test_generate_signature_list_conformations_included(default_Model_irreversab
     assert sig_list[0].third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
 
 # Test if the generate_signature_list gives back a 'conformations included' signature
-def test_generate_signature_list_any_conformations_included(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
+def test_generate_signature_list_any_conformations_included_association(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_irreversable_association
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
@@ -567,10 +612,112 @@ def test_generate_signature_list_any_conformations_included(default_Model_irreve
     assert sig_list[2].third_state_count[(dpi, (0,))] == 0
     assert sig_list[2].third_state_count[(dpi, (1,))] == 0
     assert sig_list[2].third_state_count[(dpi, (0,1))] == 2
-    
+
     #NOTE: Kinda complex function, perhaps more tests would be appropreate? 
     #Also, this is gonna need to be refactored to split out the "any" conformation replacemetn from the rule-specific signature generation 
+
+#EDIT THESE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Test if the generate_signature_list gives back a 'components only' signature
+def test_generate_signature_list_components_only_dissociation(default_Model_irreversable_dissociation, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_dissociation
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+
+    # We have A dissociates from AR([]), with R able to take '' and '*' conformations
+    sig_list = r1.generate_signature_list()
     
+    # expect one 'components only' signature, A dissociates from AR --> R
+    assert len(sig_list) == 1
+    assert sig_list[0].count_type == 'components only'
+    
+    # A dissociates from AR([]) --> R([])  Check if we got the expected result
+    assert sig_list[0].subject_count[ddi] == 1
+    assert sig_list[0].subject_count[dpi] == 0
+    assert sig_list[0].object_count[ddi] == 1
+    assert sig_list[0].object_count[dpi] == 1
+    assert sig_list[0].third_state_count[ddi] == 0
+    assert sig_list[0].third_state_count[dpi] == 1
+
+# Test if the generate_signature_list gives back a 'conformations included' signature
+def test_generate_signature_list_conformations_included_dissociation(default_Model_irreversable_dissociation, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_dissociation
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+
+    # Edit so that we have A dissociates from AR(['','*'])
+    r1.object_conf = [None, [0,1]]
+    sig_list = r1.generate_signature_list()
+    
+    # expect one 'conformations included' signature, A dissociates from AR(0,1) --> R(0,1)
+    assert len(sig_list) == 1
+    assert sig_list[0].count_type == 'conformations included'
+    
+    # A dissociates from AR(['','*']) --> R(['','*'])  Check if we got the expected result
+    assert sig_list[0].subject_count[(ddi, None)] == 1
+    assert sig_list[0].subject_count[(dpi, (0,1))] == 0
+    assert sig_list[0].object_count[(ddi, None)] == 1
+    assert sig_list[0].object_count[(dpi, (0,1))] == 1
+    assert sig_list[0].third_state_count[(ddi, None)] == 0
+    assert sig_list[0].third_state_count[(dpi, (0,1))] == 1
+    assert sig_list[0].third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
+#HERE!!!!!!!!!!!!!!!!!!!!!1
+# Test if the generate_signature_list gives back a 'conformations included' signature
+def test_generate_signature_list_any_conformations_included_dissociation(default_Model_irreversable_dissociation, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_dissociation
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+
+    # Edit so that we have A dissociates from AR([])R(['','*'])
+    r1.rule_object = [ddi, dpi, dpi]
+    r1.object_conf = [None, [], [0,1]]
+    sig_list = r1.generate_signature_list()
+    
+    # Expect three signatures
+    assert len(sig_list) == 3
+    assert sig_list[0].count_type == 'conformations included'
+    # A leaves AR(0)R(0,1) --> R(0)R(0,1)
+    assert sig_list[0].subject_count[(ddi, None)] == 1
+    assert sig_list[0].subject_count[(dpi, (0,))] == 0
+    assert sig_list[0].subject_count[(dpi, (1,))] == 0
+    assert sig_list[0].subject_count[(dpi, (0,1))] == 0
+    assert sig_list[0].object_count[(ddi, None)] == 1
+    assert sig_list[0].object_count[(dpi, (0,))] == 1
+    assert sig_list[0].object_count[(dpi, (1,))] == 0
+    assert sig_list[0].object_count[(dpi, (0,1))] == 1
+    assert sig_list[0].third_state_count[(ddi, None)] == 0
+    assert sig_list[0].third_state_count[(dpi, (0,))] == 1
+    assert sig_list[0].third_state_count[(dpi, (1,))] == 0
+    assert sig_list[0].third_state_count[(dpi, (0,1))] == 1
+    # A leaves AR(1)R(0,1) --> R(1)R(0,1)
+    assert sig_list[1].subject_count[(ddi, None)] == 1
+    assert sig_list[1].subject_count[(dpi, (0,))] == 0
+    assert sig_list[1].subject_count[(dpi, (1,))] == 0
+    assert sig_list[1].subject_count[(dpi, (0,1))] == 0
+    assert sig_list[1].object_count[(ddi, None)] == 1
+    assert sig_list[1].object_count[(dpi, (0,))] == 0
+    assert sig_list[1].object_count[(dpi, (1,))] == 1
+    assert sig_list[1].object_count[(dpi, (0,1))] == 1
+    assert sig_list[1].third_state_count[(ddi, None)] == 0
+    assert sig_list[1].third_state_count[(dpi, (0,))] == 0
+    assert sig_list[1].third_state_count[(dpi, (1,))] == 1
+    assert sig_list[1].third_state_count[(dpi, (0,1))] == 1
+    # A leaves AR(0,1)R(0,1) --> R(0,1)R(0,1)
+    assert sig_list[2].subject_count[(ddi, None)] == 1
+    assert sig_list[2].subject_count[(dpi, (0,))] == 0
+    assert sig_list[2].subject_count[(dpi, (1,))] == 0
+    assert sig_list[2].subject_count[(dpi, (0,1))] == 0
+    assert sig_list[2].object_count[(ddi, None)] == 1
+    assert sig_list[2].object_count[(dpi, (0,))] == 0
+    assert sig_list[2].object_count[(dpi, (1,))] == 0
+    assert sig_list[2].object_count[(dpi, (0,1))] == 2
+    assert sig_list[2].third_state_count[(ddi, None)] == 0
+    assert sig_list[2].third_state_count[(dpi, (0,))] == 0
+    assert sig_list[2].third_state_count[(dpi, (1,))] == 0
+    assert sig_list[2].third_state_count[(dpi, (0,1))] == 2
+
 # ------Tests for Network objects------
 
 #Test if Network objects have the required properties
@@ -590,11 +737,11 @@ def test_CountingSignature_has_third_state_count(default_CountingSignature_insta
     assert hasattr(default_CountingSignature_instance, 'third_state_count')
     
 # Test if we get the intended collections.Counter dictionaries when we create CountingSignatures 
-def test_CountingSignature_components(default_Protein_instance, default_Drug_instance):
+def test_CountingSignature_components_association(default_Protein_instance, default_Drug_instance):
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
     
-    # Create a few states A + R(0,1) --> AR(0,1)
+    # Create a few states A + R(0,1) --> AR(0,1), rule not actually tested here, just signature function
     s1 = bkcc.State()
     s1.required_drug_list = [ddi]
     
@@ -619,11 +766,11 @@ def test_CountingSignature_components(default_Protein_instance, default_Drug_ins
     assert test_signature.third_state_count[dpi] == 1
 
 # Test if we get the intended collections.Counter dictionaries when we create CountingSignatures 
-def test_CountingSignature_coformations(default_Protein_instance, default_Drug_instance):
+def test_CountingSignature_conformations(default_Protein_instance, default_Drug_instance):
     dpi = default_Protein_instance
     ddi = default_Drug_instance # For typing convenience
     
-    # Create a few states A + R(0,1) --> AR(0,1)
+    # Create a few states A + R(0,1) --> AR(0,1), rule not actually tested here, just signature function
     s1 = bkcc.State()
     s1.required_drug_list = [ddi]
     
@@ -667,5 +814,5 @@ def test_CountingSignature_direct_counts(default_Protein_instance, default_Drug_
     assert test_signature.third_state_count[(ddi, None)] == 1
     assert test_signature.third_state_count[(dpi, (0,1))] == 1
     assert test_signature.third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
-    
+
 #continue with writing tests.....
