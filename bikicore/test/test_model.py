@@ -60,7 +60,26 @@ def model_for_matching_tests(default_Model_instance):
     r1.check_rule_traits()
     dmi.rule_list = [r1]
     return dmi
+
+# Setup for many dissociation tests
+@pytest.fixture()
+def model_for_dissociation_matching(default_Model_instance):
+    dmi = default_Model_instance
     
+    # Create a new Network object without calling dmi.generate_network()
+    dmi.network = bkcc.Network()
+    
+    #Setup rule for simple drug disassociation - "A disassociates from AR"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [dmi.drug_list[0], dmi.protein_list[0]]
+    r1.object_conf = [None, []]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    return dmi
+
 # ---- Unit tests ----
 
 # --Tests for Model objects--
@@ -458,7 +477,7 @@ def test_find_association_pairs_with_conformation(model_for_matching_tests, defa
     # Check if we got the expected result
     assert valid_tuples == [(s1, s2)]
 
-# Test that we return valid state pairs with a simple signature
+# Test that we return valid state and split index pairs with a simple signature
 def test_find_dissociation_pairs(default_Model_instance, default_Protein_instance, default_Drug_instance):
     dmi = default_Model_instance
     dpi = default_Protein_instance
@@ -478,28 +497,97 @@ def test_find_dissociation_pairs(default_Model_instance, default_Protein_instanc
     ref_sig = r1.generate_signature_list()
     
     # Make some states
-    s1 = bkcc.State()
+    s1 = bkcc.State() # Doesn't work - no protein
     s1.required_drug_list = [ddi]
     
-    s2 = bkcc.State()
+    s2 = bkcc.State()  # Doesn't work - no drug
     s2.required_protein_list = [dpi]
     s2.req_protein_conf_lists = [[0,1]]
     
-    s3 = bkcc.State()
+    s3 = bkcc.State() # Should work, only one split
     s3.required_drug_list = [ddi]
     s3.required_protein_list = [dpi]
     s3.req_protein_conf_lists = [[0,1]]
     
+    s4 = bkcc.State() # Should work, two different possible leaving drugs (need link analysis to find the correct one)
+    s4.required_drug_list = [ddi, ddi]
+    s4.required_protein_list = [dpi]
+    s4.req_protein_conf_lists = [[0,1]]
+    
     # Make some state lists
-    test_sub_list = [s1, s2, s3]
-    test_obj_list = [s1, s2, s3]
+    test_obj_list = [s1, s2, s3, s4]
     
     # Run function
-    valid_tuples = dmi._find_dissociation_pairs(ref_sig, test_sub_list, test_obj_list)
-    print(valid_tuples)
-    # Check if we got the expected result
-    assert valid_tuples == [(s1, s3), (s2, s3)]
+    valid_tuples = dmi._find_dissociation_pairs(ref_sig, test_obj_list)
 
+    # Check if we got the expected result
+    assert valid_tuples == [(s3, (0,)), (s4, (0,)), (s4, (1,))]
+    
+# Test that we return valid state and split index pairs with a simple signature
+def test_find_dissociation_pairs_with_conformations(default_Model_instance, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    #Setup rule for simple drug disassociation - "A disassociates from AR"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [ddi]
+    r1.subject_conf = [None]
+    r1.rule = ' dissociates from '
+    r1.rule_object = [ddi, dpi]
+    r1.object_conf = [None, [0]]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    
+    # Get the signature
+    ref_sig = r1.generate_signature_list()
+    
+    # Make some states
+    s1 = bkcc.State() # Doesn't work - no protein
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State() # Doesn't work - no drug
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0]]
+    
+    s3 = bkcc.State() # Should work, only one split
+    s3.required_drug_list = [ddi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[0]]
+    
+    s4 = bkcc.State() # Should work, two different possible leaving drugs (need link analysis to find the correct one)
+    s4.required_drug_list = [ddi, ddi]
+    s4.required_protein_list = [dpi]
+    s4.req_protein_conf_lists = [[0]]
+    
+    s5 = bkcc.State() # Doesn't work, wrong conformation
+    s5.required_drug_list = [ddi] 
+    s5.required_protein_list = [dpi]
+    s5.req_protein_conf_lists = [[1]]
+    
+    s6 = bkcc.State() # Should work, get one good split of just the drug, and one split of drug plus R(1), which we have to clean with link checking
+    s6.required_drug_list = [ddi]
+    s6.required_protein_list = [dpi, dpi]
+    s6.req_protein_conf_lists = [[0], [1]]
+    
+    s7 = bkcc.State() # Should work, get two good splits of the different drugs (need link analysis to find the correct ones)
+    s7.required_drug_list = [ddi, ddi]
+    s7.required_protein_list = [dpi, dpi]
+    s7.req_protein_conf_lists = [[0], [0]]
+    
+    # Make some state lists
+    test_obj_list = [s1, s2, s3, s4, s5, s6, s7]
+    
+    # Run function
+    valid_tuples = dmi._find_dissociation_pairs(ref_sig, test_obj_list)
+    print(ref_sig[0].count_type)
+    print([s1, s2, s3, s4, s5, s6, s7])
+    print(valid_tuples)
+    
+    # Check if we got the expected result
+    assert valid_tuples == [(s3, (0,)), (s4, (0,)), (s4, (1,)), (s6, (0,)), (s6, (0, 2)), (s7, (0,)), (s7, (1,))]
+
+########HERE###########
 # Test for correct translation of link lists
 def test_combine_internal_link_lists(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
@@ -705,3 +793,25 @@ def test_find_association_internal_link_dimer_open_for_binding(model_for_matchin
     # Compare outputs
     assert test_state_tuples == [(s1, s2)]
     assert test_link_list == [(0,3)]
+    
+# Test if the internal link finding/testing function returns the expected result for a simple dissociation case       
+def test_find_dissociation_internal_link(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
+    mdm = model_for_dissociation_matching    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Rule for drug association - "A dissociates from AR([])"
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[0,1]]
+    s1.internal_links = [(0,1)]
+    
+    # Run function
+    test_state_split_tuples, test_link_list = mdm._find_dissociation_internal_link(mdm.rule_list[0], [(s1, (0,))])
+    
+    # Compare outputs
+    assert test_state_split_tuples == [(s1, (0,))]
+    assert test_link_list == [(0, 1)]
