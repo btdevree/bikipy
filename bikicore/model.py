@@ -70,13 +70,13 @@ class Model(HasTraits):
 
             # Each type of rule needs a different treatment
             
-            # Irreversable association
-            if current_rule.rule == ' associates with ':
+            # Association
+            if current_rule.rule == ' associates with ' or current_rule.rule == ' reversibly associates with ':
                 
                 # Get a list of accecptable signatures for the rule and read which type of signature we need
                 reference_signatures = current_rule.generate_signature_list()
                 
-                # Find states that fit the rule discription
+                # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
@@ -87,29 +87,35 @@ class Model(HasTraits):
                 valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
                 # Associate any valid pairs of states 
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
-                    self._create_association(graph, *current_state_tuple, current_link_tuple)
-                
+                    if current_rule.rule == ' associates with ':
+                        self._create_association(graph, *current_state_tuple, current_link_tuple)
+                    elif current_rule.rule == ' reversibly associates with ':
+                        self._create_association(graph, *current_state_tuple, current_link_tuple, reversible = True) 
+         
             # Irreversable disassociation
-            elif current_rule.rule == ' dissociates_from ':
-                
+            elif current_rule.rule == ' dissociates from ' or current_rule.rule == ' reversibly dissociates from ':
+
                 # Get a list of accecptable signatures for the rule and read which type of signature we need
                 reference_signatures = current_rule.generate_signature_list()
                 
-                # Find states that fit the rule discription
+                # Find states that fit the rule description
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
                 
                 # Find the possible pairings of subject and object states that create valid signatures
                 possible_state_split_list = self._find_dissociation_pairs(reference_signatures, matching_object_states)
                 
                 # Test if the a pair of states could create the implied internal structure required by the rule
-                valid_state_split_list, valid_link_list = self._find_dissociation_internal_link(current_rule, possible_state_split_list)
+                valid_state_split_list, valid_link_lists = self._find_dissociation_internal_link(current_rule, possible_state_split_list)
                 
                 # Associate any valid pairs of states 
-                for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
-                    self._create_association(graph, *current_state_tuple, current_link_tuple)
-            
-            elif current_rule.rule == ' reversibly associates with ':
-                pass
+                for current_state_split_tuple, current_link_tuple in zip(valid_state_split_list, valid_link_lists):
+                    if current_rule.rule == ' dissociates from ':
+                        self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple)
+                    elif current_rule.rule == ' reversibly dissociates from ':
+                        self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
+
+            else:
+                raise ValueError("Rule not recognized")
     
     def _find_states_that_match_rule(self, rule, what_to_find):
         # Helper function that looks through a graph and returns lists states that include a rule's required components
@@ -160,9 +166,30 @@ class Model(HasTraits):
             else: #no break
                 # If we arrive here, there was not a matching link
                 return False # Short-circut answer
-
+         
         # Get the components and conformations that the state requires
-        remaining_components, remaining_conformations = query_state.generate_component_list()
+        query_component_list, query_conformation_list = query_state.generate_component_list()
+        
+        # Run the comparison
+        component_boolean = self._compare_component_lists(query_component_list, query_conformation_list, reference_component_list, reference_conformation_list, match)
+        
+        # Need to factor in the link matching as well
+        if match == 'minimal':
+            return component_boolean
+        elif match == 'exact':
+            if remaining_links == []:
+                return component_boolean
+            else:
+                return False
+        else: # No other match modes supported, raise error
+            raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
+        
+    def _compare_component_lists(self, query_component_list, query_conformation_list, reference_component_list, reference_conformation_list, match = 'exact'):
+        # Function to compare two sets of component and conformation lists, with no regard to order and without replacement    
+        
+        # Create copies of query lists for consumption
+        remaining_components = query_component_list.copy()
+        remaining_conformations = query_conformation_list.copy()
         
         # Loop through all remaining reference components for each query component
         for current_ref_comp, current_ref_conf in zip(reference_component_list, reference_conformation_list): 
@@ -188,19 +215,20 @@ class Model(HasTraits):
         
         # Otherwise, we need to make sure we completely consumed the reference lists
         elif match == 'exact':
-            if remaining_components == [] and remaining_conformations == [] and remaining_links == []:
+            if remaining_components == [] and remaining_conformations == []:
                 return True
             else:
                 return False
         
         # No other match modes supported, raise error
         else:
-            raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
-   
+            raise ValueError('Function _compare_component_lists received an incorrect argument for parameter "match"')
+    
     def _find_association_pairs(self, reference_signatures, matching_subject_states, matching_object_states):
         # Function that returns a list of 2-tuples containing a valid subject and object state pair for an association reaction
         
         # Get the type of signatures required
+        print(reference_signatures)
         count_type = reference_signatures[0].count_type
         
         # Loop through all the possible combinations of subject and object states and store any valid pairs
@@ -323,7 +351,7 @@ class Model(HasTraits):
         else:
             return False
 
-    def _create_association(self, graph, subject_state, object_state, new_link):
+    def _create_association(self, graph, subject_state, object_state, new_link, reversible = False):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
         # New link must be given for components in the assocated state 
@@ -352,38 +380,58 @@ class Model(HasTraits):
         # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
         graph.add_edge(subject_state, associated_state)
         graph.add_edge(object_state, associated_state)
+        if reversible:
+            graph.add_edge(associated_state, subject_state)
+            graph.add_edge(associated_state, object_state)
     
-    def _create_dissociation(self, graph, subject_state, object_state, new_link):
-        # Function to connect two states into an association relationship on the given graph
-        # Creates a new associated state if one cannot be found in existing graph
-        # New link must be given for components in the assocated state 
-          # MUST BE CHANGED          
-        # Create lists of components/conformations for a possible associated state
-        sub_comp, sub_conf = subject_state.generate_component_list()
-        obj_comp, obj_conf = object_state.generate_component_list()
-        associated_component_list = sub_comp + obj_comp
-        associated_conformation_list = sub_conf + obj_conf
-        associated_old_links = self._combine_internal_link_lists(subject_state, object_state)
-        associated_links = associated_old_links + [new_link]
+    def _create_dissociation(self, graph, object_state, split_indices, subject_link_list, third_state_link_list, reversible = False):
+        # Function to split an object state into the subject state and a remaining third state on a given graph
+        # Creates new states if the generated ones cannot be found in existing graph
+        # Link lists must be given for components in the split states
                 
-        # See if this possible state already exists in the graph
+        # Get indices of the third state 
+        remaining_indices = [x for x in range(0, len(object_state.required_drug_list + object_state.required_protein_list)) if x not in split_indices] 
+        
+        # Create new lists of components for the split-off states 
+        object_comp, object_conf = object_state.generate_component_list()
+        subject_comp = [object_comp[i] for i in split_indices]
+        subject_conf = [object_conf[i] for i in split_indices]
+        third_state_comp = [object_comp[i] for i in remaining_indices]
+        third_state_conf = [object_conf[i] for i in remaining_indices]
+                
+        # See if the subject state already exists in the graph
         for current_state in graph.__iter__():
-            if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, associated_links, match = 'exact'):
+            if self._state_match_to_component_lists(current_state, subject_comp, subject_conf, subject_link_list, match = 'exact'):
                 # If the state already exists, use it
-                associated_state = current_state
+                subject_state = current_state
                 break
         
-        # If no valid associated state alreay exists, create a new one
+        # If no valid subject state alreay exists, create a new one
         else: # no break
-            associated_state = bkcc.State()
-            associated_state.add_component_list(associated_component_list, associated_conformation_list)
-            associated_state.internal_links = associated_links
+            subject_state = bkcc.State()
+            subject_state.add_component_list(subject_comp, subject_conf)
+            subject_state.internal_links = subject_link_list
+        
+        # See if the third state already exists in the graph
+        for current_state in graph.__iter__():
+            if self._state_match_to_component_lists(current_state, third_state_comp, third_state_conf, third_state_link_list, match = 'exact'):
+                # If the state already exists, use it
+                third_state = current_state
+                break
+        
+        # If no valid subject state alreay exists, create a new one
+        else: # no break
+            third_state = bkcc.State()
+            third_state.add_component_list(third_state_comp, third_state_conf)
+            third_state.internal_links = third_state_link_list
             
         # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
-        graph.add_edge(subject_state, associated_state)
-        graph.add_edge(object_state, associated_state)
-        
-            
+        graph.add_edge(object_state, subject_state)
+        graph.add_edge(object_state, third_state)
+        if reversible:
+             graph.add_edge(subject_state, object_state)
+             graph.add_edge(third_state, object_state)    
+                    
     def _translate_link_tuple(self, link_tuple, translate_dict):
         # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
         if isinstance(link_tuple, int): # Need to handle a single integer element as well
@@ -426,7 +474,52 @@ class Model(HasTraits):
         # If neither are true, we are by definition a mismatch
         else:
             return False
+    
+    def _compare_components_dissociation_rule_and_link(self, rule, link, reference_state):
+        # Tests if the broken link in the given state matches the rule's splitting pattern
         
+        # Get lists of components/conformations
+        reference_component_list, reference_conformation_list = reference_state.generate_component_list()
+        link_element1_component_list, link_element1_conformation_list = self._collect_link_components(link[0], reference_component_list, reference_conformation_list)
+        link_element2_component_list, link_element2_conformation_list = self._collect_link_components(link[1], reference_component_list, reference_conformation_list)
+        rule_subject_comp, rule_subject_conf = rule.generate_component_list('subject')
+        rule_third_state_comp, rule_third_state_conf = rule.generate_component_list('difference')
+        
+        # See if the link matches the rule in either forward or reverse direction
+        if self._compare_component_lists(link_element1_component_list, link_element1_conformation_list, rule_subject_comp, rule_subject_conf, match = 'minimal'):
+            if self._compare_component_lists(link_element2_component_list, link_element2_conformation_list, rule_third_state_comp, rule_third_state_conf, match = 'minimal'):
+                return True
+        elif self._compare_component_lists(link_element1_component_list, link_element1_conformation_list, rule_third_state_comp, rule_third_state_conf, match = 'minimal'):
+            if self._compare_component_lists(link_element2_component_list, link_element2_conformation_list, rule_subject_comp, rule_subject_conf, match = 'minimal'):
+                return True
+        else:
+            return False
+    
+    def _collect_link_components(self, query_tuple_element, reference_component_list, reference_conformation_list, previous_component_list = None, previous_conformation_list = None):
+        # Generator expression to collect component/conformation lists from complex tuple trees
+        
+        # Need to make new list if none passed in call
+        if previous_component_list == None:
+            previous_component_list = []
+        if previous_conformation_list == None:
+            previous_conformation_list = []
+        
+        # Recursive testing if we have a tuple of values single index value
+        if isinstance(query_tuple_element, tuple):
+            for element in query_tuple_element:
+                previous_component_list, previous_conformation_list = self._collect_link_components(element, reference_component_list, reference_conformation_list, previous_component_list, previous_conformation_list) 
+    
+        # Otherwise, get the referenced component/conformation by the index value 
+        elif isinstance(query_tuple_element, int):
+            previous_component_list.append(reference_component_list[query_tuple_element])
+            previous_conformation_list.append(reference_conformation_list[query_tuple_element])
+        
+        # Don't want to silently accecpt bad argurments
+        else:
+            raise ValueError("Function received unexpected values in the query_tuple_element parameter")
+        
+        return previous_component_list, previous_conformation_list
+            
     def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link lists from states 1 and 2 into that of the associated state
         
@@ -465,42 +558,75 @@ class Model(HasTraits):
         else:
             return translated_list
         
-    def _split_internal_link_lists(self, state_12, split_indices, return_translation_dicts = False):
+    def _split_internal_link_list(self, state_12, split_indices, return_translation_dicts = False):
         # Function to translate the link list from an associated state into two seperate states.
         
-        # How many of each type of component are in each state
+        # Calculate which links are going to be broken
+        broken_state12_links = []
+        state1_links = []
+        state2_links = []
+        for current_link in state_12.internal_links:
+            
+            # Run tests to see if link contains elements from the states that are split off
+            all_test = self._index_tuple_element_all_split_test(current_link, split_indices)
+            any_test = self._index_tuple_element_any_split_test(current_link, split_indices)
+            
+            # Classify link
+            if all_test: # Only a link completely contained in the split-off state will pass
+                state1_links.append(current_link)
+            elif not any_test: # Only a link completely contained in the remaining state will fail
+                state2_links.append(current_link)
+            elif not all_test and any_test: # Some, but not all, the components of the link are split, so this is broken
+                broken_state12_links.append(current_link)
+       
+        # Translate the remaining links for the new states
+        # How many of each type of component are in the associated state
         num_12_drug = len(state_12.required_drug_list)
         num_12_protein = len(state_12.required_protein_list)
         
-        ############# HERE###############3# Make 1 to 12 translation dictionary
-        translate_12_to_1 = {}
-        for old_index in range(0, num_12_drug):
-            translate_1_to_12[old_index] = old_index
-        for old_index in range(num_1_drug, num_1_drug + num_1_protein):
-            translate_1_to_12[old_index] = old_index + num_2_drug
-            
-        # Make 2 to 12 translation dictionary
-        translate_2_to_12 = {}
-        for old_index in range(0, num_2_drug):
-            translate_2_to_12[old_index] = old_index + num_1_drug
-        for old_index in range(num_2_drug, num_2_drug + num_2_protein):
-            translate_2_to_12[old_index] = old_index + num_1_drug + num_1_protein
+        # Get indices of the third state 
+        remaining_indices = [x for x in range(0, num_12_drug + num_12_protein) if x not in split_indices] 
         
+        # Make 12 to 1/2 translation dictionary, 1 = subject, 2 = third state
+        translate_12_to_1 = {}
+        for new_index, old_index in enumerate(split_indices):
+            translate_12_to_1[old_index] = new_index
+        translate_12_to_2 = {}
+        for new_index, old_index in enumerate(remaining_indices):
+            translate_12_to_2[old_index] = new_index
+            
         # Translate the link lists
-        translated_link_1_list = [self._translate_link_tuple(link, translate_1_to_12) for link in state_1.internal_links]
-        translated_link_2_list = [self._translate_link_tuple(link, translate_2_to_12) for link in state_2.internal_links]
-        translated_list = translated_link_1_list + translated_link_2_list
+        translated_state1_links = [self._translate_link_tuple(link, translate_12_to_1) for link in state1_links]
+        translated_state2_links = [self._translate_link_tuple(link, translate_12_to_2) for link in state2_links]
         
         # Return the requested information
         if return_translation_dicts:
             # Make 12 to 1 and 12 to 2 dictionaries
-            translate_12_to_1 = {value: key for key, value in translate_1_to_12.items()}
-            translate_12_to_2 = {value: key for key, value in translate_2_to_12.items()}
+            translate_1_to_12 = {value: key for key, value in translate_12_to_1.items()}
+            translate_2_to_12 = {value: key for key, value in translate_12_to_2.items()}
             
-            return translated_list, [translate_1_to_12, translate_2_to_12, translate_12_to_1, translate_12_to_2]
+            return broken_state12_links, translated_state1_links, translated_state2_links, [translate_1_to_12, translate_2_to_12, translate_12_to_1, translate_12_to_2]
         else:
-            return translated_list
-
+            return broken_state12_links, translated_state1_links, translated_state2_links
+    
+    def _index_tuple_element_all_split_test(self, index_tuple_element, split_indices):
+        # Generator expression to compare complex tuple trees, asks if all of the index values of the tuple element are included in the split list
+                
+        # Recursive testing if we have tuples instead of a single index value
+        if  isinstance(index_tuple_element, tuple):
+            return all(self._index_tuple_element_any_split_test(element, split_indices) for element in index_tuple_element)
+        else:
+            return index_tuple_element in split_indices
+    
+    def _index_tuple_element_any_split_test(self, index_tuple_element, split_indices):
+        # Generator expression to compare complex tuple trees, asks if any of the index values of the tuple element are included in the split list
+                
+        # Recursive testing if we have tuples instead of a single index value
+        if  isinstance(index_tuple_element, tuple):
+            return any(self._index_tuple_element_any_split_test(element, split_indices) for element in index_tuple_element)
+        else:
+            return index_tuple_element in split_indices
+        
     def _find_association_internal_link(self, rule, state_pairs):
         # Function to check if the pairs of states given can be associated to make the new internal link structure implied by the given rule
         
@@ -538,8 +664,6 @@ class Model(HasTraits):
             # Now ask if we previously made this exact same link, and if so, reject the pair
             valid_first_elements = []
             valid_second_elements = []
-
-            #for newlink in itertools.product(subject_combos, object_combos):
             for new_link_first_element, new_link_second_element in itertools.product(subject_combos, object_combos):
  
                 # If the element is a singleton tuple, convert it to a number
@@ -547,7 +671,6 @@ class Model(HasTraits):
                     new_link_first_element = new_link_first_element[0]
                 if len(new_link_second_element) == 1:
                     new_link_second_element = new_link_second_element[0]
-                    
                 
                 # Translate into associated state indices
                 new_associated_link_first_element = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
@@ -600,67 +723,22 @@ class Model(HasTraits):
         valid_link_tuples = []
         for state_split_pair in state_split_pairs:
             
-            #HERE
-            # Make the associated link index list, translation dictionaries, and component list
-            associated_old_link_list, translation_dicts = self._combine_internal_link_lists(state_pair[0], state_pair[1], True)
-            associated_component_list = self._combine_component_list(state_pair[0].generate_component_list(True), state_pair[1].generate_component_list(True))
+            # Try making the split and get back the broken and changed link lists
+            broken_links, new_subject_links, new_third_state_links = self._split_internal_link_list(state_split_pair[0], state_split_pair[1])
             
-            # Now ask if we previously made this exact same link, and if so, reject the pair
-            valid_first_elements = []
-            valid_second_elements = []
-
-            #for newlink in itertools.product(subject_combos, object_combos):
-            for new_link_first_element, new_link_second_element in itertools.product(subject_combos, object_combos):
- 
-                # If the element is a singleton tuple, convert it to a number
-                if len(new_link_first_element) == 1:
-                    new_link_first_element = new_link_first_element[0]
-                if len(new_link_second_element) == 1:
-                    new_link_second_element = new_link_second_element[0]
-                    
-                
-                # Translate into associated state indices
-                new_associated_link_first_element = self._translate_link_tuple(new_link_first_element, translation_dicts[0])
-                new_associated_link_second_element = self._translate_link_tuple(new_link_second_element, translation_dicts[1])
-               
-                # Check if the first part of the new link is already linked with another component copy of the second part 
-                # Find anything linked to the first element
-                old_link_element_to_first_element = []
-                for old_link in associated_old_link_list:
-                    if old_link[0] == new_associated_link_first_element:
-                        old_link_element_to_first_element.append(old_link[1])
-                    if old_link[1] == new_associated_link_first_element:
-                        old_link_element_to_first_element.append(old_link[0])
-                
-                # Check if anything has the same component structure as the new peice
-                old_link_found = []
-                for old_link_element in old_link_element_to_first_element:
-                    old_link_found.append(self._compare_components_linked_tuple_element(old_link_element, new_associated_link_second_element, associated_component_list))
-                        
-                # Find anything linked to the second element
-                old_link_element_to_second_element = []
-                for old_link_element in associated_old_link_list:
-                    if old_link[0] == new_associated_link_second_element:
-                        old_link_element_to_second_element.append(old_link[1])
-                    if old_link[1] == new_associated_link_second_element:
-                        old_link_element_to_second_element.append(old_link[0])
-                
-                # Check if anything has the same component structure as the new peice
-                for old_link_element in old_link_element_to_second_element:
-                    old_link_found.append(self._compare_components_linked_tuple_element(old_link_element, new_associated_link_first_element, associated_component_list))
+            # Any split that breaks more than one link is not appropreate (Is this true? I think so...)
+            if len(broken_links) != 1:
+                continue # This is not correct, try next splitting position           
             
-                # We should be able to use any links that haven't been formed already
-                if not any(old_link_found):
-                    valid_first_elements.append(new_associated_link_first_element)
-                    valid_second_elements.append(new_associated_link_second_element)
-            
-            # Any valid link element combos should be made into a new link
-            for first_element, second_element in zip(valid_first_elements, valid_second_elements):
-                valid_state_tuples.append(state_pair)
-                valid_link_tuples.append((first_element, second_element))
+            # See if the broken link (in the forward direction) matches the rule's splitting pattern
+            if self._compare_components_dissociation_rule_and_link(rule, broken_links[0], state_split_pair[0]):
+                
+                # Add split to the list of valid reactions            
+                valid_state_split_tuples.append(state_split_pair)
+                valid_link_tuples.append((new_subject_links, new_third_state_links))
 
         # Send back the list of things that should work
-        return valid_state_tuples, valid_link_tuples
+        return valid_state_split_tuples, valid_link_tuples
     
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):

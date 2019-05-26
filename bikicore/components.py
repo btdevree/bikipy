@@ -186,6 +186,7 @@ class Rule(HasTraits):
     _rule_choices = [' associates with ',
                      ' dissociates from ',
                      ' reversibly associates with ',
+                     ' reversibly dissociates from ',
                      ' associates and dissociates in rapid equlibrium with ',
                      ' converts to state ',
                      ' reversibly converts to state ',
@@ -238,7 +239,7 @@ class Rule(HasTraits):
                 if current_object_conf != None and any(index >= len(current_object.conformation_names) for index in current_object_conf):
                     raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
                     
-        if self.rule == ' dissociates from ':
+        if self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ':
             check_signature = CountingSignature('conformations included')
             check_signature.count_for_subject(self.rule_subject, self.subject_conf)
             check_signature.count_for_object(self.rule_object, self.object_conf)
@@ -262,9 +263,13 @@ class Rule(HasTraits):
         elif what_to_include == 'object':
             component_list = self.rule_object
             conformation_list = self.object_conf
+        elif what_to_include == 'difference':
+            all_tuples = zip(self.rule_object, self.object_conf)
+            sub_tuples = zip(self.rule_subject, self.subject_conf)
+            component_list, conformation_list  = zip(*[x for x in all_tuples if x not in sub_tuples])
         else:
             raise ValueError("Function supplied with incorrect option for parameter 'what_to_include'")
-            
+        
         # Sort the list
         # Seperate into partial lists of drugs and proteins
         drug_comp_part = [x for x in component_list if isinstance(x, Drug)]
@@ -294,7 +299,7 @@ class Rule(HasTraits):
         # Make new list
         signature_list = []
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
-        if self.rule == ' associates with ':
+        if self.rule == ' associates with ' or self.rule == ' reversibly associates with ':
                 
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
@@ -332,7 +337,7 @@ class Rule(HasTraits):
                     signature_list.append(new_sig)
                     
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
-        elif self.rule == ' dissociates from ':
+        elif self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ':
                 
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.object_conf]):
@@ -367,7 +372,7 @@ class Rule(HasTraits):
                     if new_sig.object_count == new_sig.subject_count + new_sig.third_state_count: # We filter out mismatched subject and object conformations here
                         signature_list.append(new_sig)
         else:
-            pass
+            raise ValueError("Rule type not recognized")
 
         return signature_list
     

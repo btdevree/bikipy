@@ -512,6 +512,22 @@ def test_generate_component_list_rule(default_Model_irreversable_association, de
     returned_components, returned_conformations = r1.generate_component_list()
     assert returned_components == expected_components
     assert returned_conformations == expected_conformations
+    
+# Test if the generate_component_list gives back a difference list
+def test_generate_component_list_rule_difference_mode(default_Model_irreversable_dissociation, default_Protein_instance, default_Drug_instance):
+    dmi = default_Model_irreversable_dissociation
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+
+    # Already have A dissociates from AR([])
+    
+    # Compare the returned list to the expected one
+    expected_components = [dpi]
+    expected_conformations = [[]]
+    returned_components, returned_conformations = r1.generate_component_list('difference')
+    assert returned_components == expected_components
+    assert returned_conformations == expected_conformations
 
 # Test if the generate_signature_list gives back a 'components only' signature
 def test_generate_signature_list_components_only_association(default_Model_irreversable_association, default_Protein_instance, default_Drug_instance):

@@ -124,7 +124,7 @@ def test_Model_generate_network_null(default_Model_instance):
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_Irr_association(default_Model_instance):
+def test_Model_generate_network_irr_association(default_Model_instance):
     dmi = default_Model_instance
     
     #Setup rule for simple drug association - "A associates with R"
@@ -149,7 +149,7 @@ def test_Model_generate_network_Irr_association(default_Model_instance):
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph without unwanted dimerization
-def test_Model_generate_network_Irr_association_dimers(model_for_matching_tests):
+def test_Model_generate_network_irr_association_dimers(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
@@ -184,17 +184,68 @@ def test_Model_generate_network_Irr_association_dimers(model_for_matching_tests)
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
     
-# Test that the 'associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_disassociation(default_Model_instance):
+# Test that the 'dissociates from' rule creates a valid shaped graph 
+def test_Model_generate_network_irr_disassociation(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Have rule for simple drug disassociation - "A disassociates from AR([])"
+    
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A associates with R"
+    mdm.apply_rules_to_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_edges_from([(3,1), (3,2)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
+
+# Test that the 'reversibly dissociates from' rule creates a valid shaped graph 
+def test_Model_generate_network_rev_disassociation(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Have rule for simple drug disassociation - "A disassociates from AR([])", edit to be reversible
+    mdm.rule_list[0].rule = ' reversibly dissociates from '
+    
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A associates with R"
+    mdm.apply_rules_to_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(3, 1), (3, 2), (1, 3), (2, 3)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
+    
+# Test that the 'reversibly associates with' rule creates a valid shaped graph 
+def test_Model_generate_network_rev_association(default_Model_instance):
     dmi = default_Model_instance
     
-    #Setup rule for simple drug association - "A disassociates from AR"
+    #Setup rule for simple drug association - "A reversibly associates with R"
     r1 = bkcc.Rule(dmi)
     r1.rule_subject = [dmi.drug_list[0]]
     r1.subject_conf = [None]
-    r1.rule = ' dissociates from '
-    r1.rule_object = [dmi.drug_list[0], dmi.protein_list[0]]
-    r1.object_conf = [None, []]
+    r1.rule = ' reversibly associates with '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[]]
     r1.check_rule_traits()
     
     # Attach rule to model and generate network
@@ -204,10 +255,11 @@ def test_Model_generate_network_disassociation(default_Model_instance):
     # Create comparision graph shape
     testgraph = nx.DiGraph()
     testgraph.add_nodes_from([1,2,3])
-    testgraph.add_edges_from([(3,1), (3,2)])
-    
+    testgraph.add_edges_from([(1, 3), (2, 3), (3, 1), (3, 2)])
+
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    
    
 # --------------------- Helper method tests in model.py ---------------------------    
             
@@ -580,14 +632,10 @@ def test_find_dissociation_pairs_with_conformations(default_Model_instance, defa
     
     # Run function
     valid_tuples = dmi._find_dissociation_pairs(ref_sig, test_obj_list)
-    print(ref_sig[0].count_type)
-    print([s1, s2, s3, s4, s5, s6, s7])
-    print(valid_tuples)
     
     # Check if we got the expected result
     assert valid_tuples == [(s3, (0,)), (s4, (0,)), (s4, (1,)), (s6, (0,)), (s6, (0, 2)), (s7, (0,)), (s7, (1,))]
 
-########HERE###########
 # Test for correct translation of link lists
 def test_combine_internal_link_lists(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
@@ -793,8 +841,65 @@ def test_find_association_internal_link_dimer_open_for_binding(model_for_matchin
     # Compare outputs
     assert test_state_tuples == [(s1, s2)]
     assert test_link_list == [(0,3)]
+
+# Test for correct translation of link lists
+def test_split_internal_link_list(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
+    mdm = model_for_dissociation_matching    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
     
-# Test if the internal link finding/testing function returns the expected result for a simple dissociation case       
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0, 1], [0, 1]]
+    s1.internal_links = [(0, 1), (1, 2)]
+    
+    split_indices = [0]
+    
+    # Run method
+    broken_state12_links, state1_links, state2_links = mdm._split_internal_link_list(s1, split_indices)
+    
+    # Check if we got the expected result
+    assert broken_state12_links == [(0, 1)]
+    assert state1_links == []
+    assert state2_links == [(0, 1)]
+
+# Test for correct creation of translation dictionaries
+def test_split_internal_link_list_translation_dictionaries(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
+    mdm = model_for_dissociation_matching    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Make some states
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0, 1], [0, 1]]
+    s1.internal_links = [(0, 1), (1, 2)]
+    
+    split_indices = [0]
+    
+    # Run method
+    broken_state12_links, state1_links, state2_links, translation_dicts = mdm._split_internal_link_list(s1, split_indices, True)
+
+    # Dictionaries are returned in order: 1 to 12, 2 to 12, 12 to 1, 12 to 2; 1 = subject, 12 = object, 2 = third state
+    assert len(translation_dicts) == 4
+    assert translation_dicts[0][0] == 0
+    assert translation_dicts[1][0] == 1
+    assert translation_dicts[1][1] == 2
+    assert translation_dicts[2][0] == 0    
+    assert translation_dicts[3][1] == 0
+    assert translation_dicts[3][2] == 1
+    with pytest.raises(KeyError): # These keys should not exist
+        translation_dicts[0][1]
+        translation_dicts[0][2]
+        translation_dicts[1][2]
+        translation_dicts[2][1]
+        translation_dicts[2][2]
+        translation_dicts[3][0]
+    
+# Test if the internal link finding/testing function returns the expected result for a dissociation case       
 def test_find_dissociation_internal_link(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
     mdm = model_for_dissociation_matching    
     dpi = default_Protein_instance
@@ -802,16 +907,72 @@ def test_find_dissociation_internal_link(model_for_dissociation_matching, defaul
     
     # Rule for drug association - "A dissociates from AR([])"
     
-    # Make some states
+    # Make a states
     s1 = bkcc.State()
     s1.required_drug_list = [ddi]
-    s1.required_protein_list = [dpi]
-    s1.req_protein_conf_lists = [[0,1]]
-    s1.internal_links = [(0,1)]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0, 1], [0, 1]]
+    s1.internal_links = [(0, 1), (1, 2)]
     
     # Run function
-    test_state_split_tuples, test_link_list = mdm._find_dissociation_internal_link(mdm.rule_list[0], [(s1, (0,))])
+    test_state_split_list, test_link_lists = mdm._find_dissociation_internal_link(mdm.rule_list[0], [(s1, (0,)), (s1, (0, 1))])
+    state1_links, state2_links = test_link_lists[0]
     
-    # Compare outputs
-    assert test_state_split_tuples == [(s1, (0,))]
-    assert test_link_list == [(0, 1)]
+    # Compare outputs, should only allow the drug to dissociate, not the dimer
+    assert test_state_split_list == [(s1, (0,))]
+    assert state1_links == []
+    assert state2_links == [(0, 1)] # In state2 index numbers
+    
+ # Tests if the broken link is consistant with a dissociation rule
+def test_compare_components_dissociation_rule_and_link(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
+    mdm = model_for_dissociation_matching    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Rule for drug association - "A dissociates from AR([])"
+    
+    # Make a state
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0, 1], [0, 1]]
+    s1.internal_links = [(0, 1), (1, 2)]
+    
+    # Try to break the AR link - should work
+    assert mdm._compare_components_dissociation_rule_and_link(mdm.rule_list[0], (0, 1), s1)
+    
+    # Try to break the AR link written backwards - should work
+    assert mdm._compare_components_dissociation_rule_and_link(mdm.rule_list[0], (1, 0), s1)
+    
+    # Try to break the RR link - should not work
+    assert not mdm._compare_components_dissociation_rule_and_link(mdm.rule_list[0], (1, 2), s1)
+    
+def test_collect_link_components(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
+    mdm = model_for_dissociation_matching    
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a reference list
+    ref_comp_list = [ddi, ddi, dpi, dpi, dpi]
+    ref_conf_list = [None, None, [0], [1], [0, 1]]
+    
+    # Run fuction with a single index
+    test_comp, test_conf = mdm._collect_link_components(4, ref_comp_list, ref_conf_list)
+    assert test_comp == [dpi]
+    assert test_conf == [[0, 1]]
+    
+    # Run fuction with a double index
+    test_comp, test_conf = mdm._collect_link_components((1, 3), ref_comp_list, ref_conf_list)
+    assert test_comp == [ddi, dpi]
+    assert test_conf == [None, [1]]
+    
+    # Run fuction with a complex index
+    test_comp, test_conf = mdm._collect_link_components((1, (0, 2), 3), ref_comp_list, ref_conf_list)
+    assert test_comp == [ddi, ddi, dpi, dpi]
+    assert test_conf == [None, None, [0], [1]]
+    
+    # Run fuction with a invalid argument
+    with pytest.raises(ValueError):
+        test_comp, test_conf = mdm._collect_link_components((1, 1.1), ref_comp_list, ref_conf_list)
+
+       
