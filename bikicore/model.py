@@ -71,7 +71,8 @@ class Model(HasTraits):
             # Each type of rule needs a different treatment
             
             # Association
-            if current_rule.rule == ' associates with ' or current_rule.rule == ' reversibly associates with ':
+            if current_rule.rule == ' associates with ' or current_rule.rule == ' reversibly associates with ' \
+                    or current_rule.rule == ' associates and dissociates in rapid equlibrium with ':
                 
                 # Get a list of accecptable signatures for the rule and read which type of signature we need
                 reference_signatures = current_rule.generate_signature_list()
@@ -90,10 +91,13 @@ class Model(HasTraits):
                     if current_rule.rule == ' associates with ':
                         self._create_association(graph, *current_state_tuple, current_link_tuple)
                     elif current_rule.rule == ' reversibly associates with ':
-                        self._create_association(graph, *current_state_tuple, current_link_tuple, reversible = True) 
+                        self._create_association(graph, *current_state_tuple, current_link_tuple, reversible = True)
+                    elif current_rule.rule == ' associates and dissociates in rapid equlibrium with ':
+                        self._create_association(graph, *current_state_tuple, current_link_tuple, reversible = True)
          
             # Irreversable disassociation
-            elif current_rule.rule == ' dissociates from ' or current_rule.rule == ' reversibly dissociates from ':
+            elif current_rule.rule == ' dissociates from ' or current_rule.rule == ' reversibly dissociates from ' \
+                    or current_rule.rule == ' dissociates and reassociates in rapid equlibrium from ':
 
                 # Get a list of accecptable signatures for the rule and read which type of signature we need
                 reference_signatures = current_rule.generate_signature_list()
@@ -112,6 +116,8 @@ class Model(HasTraits):
                     if current_rule.rule == ' dissociates from ':
                         self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple)
                     elif current_rule.rule == ' reversibly dissociates from ':
+                        self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
+                    elif current_rule.rule == ' dissociates and reassociates in rapid equlibrium from ':
                         self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
 
             else:

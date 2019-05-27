@@ -259,6 +259,57 @@ def test_Model_generate_network_rev_association(default_Model_instance):
 
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+
+# Test that the ' associates and dissociates in rapid equlibrium with ' rule creates a valid shaped graph 
+def test_Model_generate_network_rev_RE_association(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup rule for simple drug association - "A associates and dissociates in rapid equlibrium with R"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.drug_list[0]]
+    r1.subject_conf = [None]
+    r1.rule = ' associates and dissociates in rapid equlibrium with '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[]]
+    r1.check_rule_traits()
+    
+    # Attach rule to model and generate network
+    dmi.rule_list = [r1]
+    dmi.generate_network()
+    
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_edges_from([(1, 3), (2, 3), (3, 1), (3, 2)])
+
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+
+# Test that the ' dissociates and reassociates in rapid equlibrium with ' rule creates a valid shaped graph 
+def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Have rule for simple drug disassociation - "A disassociates from AR([])", edit to be reversible in rapid equlibrium
+    mdm.rule_list[0].rule = ' dissociates and reassociates in rapid equlibrium from '
+    
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A associates with R"
+    mdm.apply_rules_to_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(3, 1), (3, 2), (1, 3), (2, 3)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
     
    
 # --------------------- Helper method tests in model.py ---------------------------    

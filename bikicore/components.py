@@ -188,6 +188,7 @@ class Rule(HasTraits):
                      ' reversibly associates with ',
                      ' reversibly dissociates from ',
                      ' associates and dissociates in rapid equlibrium with ',
+                     ' dissociates and reassociates in rapid equlibrium from ',
                      ' converts to state ',
                      ' reversibly converts to state ',
                      ' converts in rapid equlibrium to state ',
@@ -239,7 +240,9 @@ class Rule(HasTraits):
                 if current_object_conf != None and any(index >= len(current_object.conformation_names) for index in current_object_conf):
                     raise RuleNotValidError('Rule cannot be given a conformation index value corrosponding to more than the number of conformations available to the protein')
                     
-        if self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ':
+        if self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ' \
+                or self.rule == ' dissociates and reassociates in rapid equlibrium from ':
+            
             check_signature = CountingSignature('conformations included')
             check_signature.count_for_subject(self.rule_subject, self.subject_conf)
             check_signature.count_for_object(self.rule_object, self.object_conf)
@@ -299,7 +302,8 @@ class Rule(HasTraits):
         # Make new list
         signature_list = []
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
-        if self.rule == ' associates with ' or self.rule == ' reversibly associates with ':
+        if self.rule == ' associates with ' or self.rule == ' reversibly associates with ' \
+                    or self.rule == ' associates and dissociates in rapid equlibrium with ':
                 
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
@@ -337,7 +341,8 @@ class Rule(HasTraits):
                     signature_list.append(new_sig)
                     
         # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
-        elif self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ':
+        elif self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ' \
+                or self.rule == ' dissociates and reassociates in rapid equlibrium from ':
                 
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.object_conf]):
