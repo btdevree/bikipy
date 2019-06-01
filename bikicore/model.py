@@ -49,11 +49,12 @@ class Model(HasTraits):
             new_state.req_protein_conf_lists = []
             self.network.main_graph.add_node(new_state)
         for current_component in self.protein_list:
-            new_state = bkcc.State()
-            new_state.required_drug_list = []
-            new_state.required_protein_list = [current_component]
-            new_state.req_protein_conf_lists = [list(range(len(current_component.conformation_names)))] # Allow all conformations
-            self.network.main_graph.add_node(new_state)
+            for current_conformation in range(len(current_component.conformation_names)):
+                new_state = bkcc.State()
+                new_state.required_drug_list = []
+                new_state.required_protein_list = [current_component]
+                new_state.req_protein_conf_lists = [[current_conformation]]
+                self.network.main_graph.add_node(new_state)
         
         # After creating the singleton graph, build the network with the given rules
         self.apply_rules_to_network()
@@ -86,6 +87,7 @@ class Model(HasTraits):
                 
                 # Test if the a pair of states could create the implied internal structure required by the rule
                 valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
+                
                 # Associate any valid pairs of states 
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
                     if current_rule.rule == ' associates with ':
@@ -95,7 +97,7 @@ class Model(HasTraits):
                     elif current_rule.rule == ' associates and dissociates in rapid equlibrium with ':
                         self._create_association(graph, *current_state_tuple, current_link_tuple, reversible = True)
          
-            # Irreversable disassociation
+            # Dissociation
             elif current_rule.rule == ' dissociates from ' or current_rule.rule == ' reversibly dissociates from ' \
                     or current_rule.rule == ' dissociates and reassociates in rapid equlibrium from ':
 
@@ -119,7 +121,16 @@ class Model(HasTraits):
                         self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
                     elif current_rule.rule == ' dissociates and reassociates in rapid equlibrium from ':
                         self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
-
+            
+            # Conformational changes and reactions
+            elif current_rule.rule == ' converts to ':
+                
+                # Find states that fit the rule description
+                matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
+                
+                # Make the conversion
+                self._create_conversion(graph, matching_subject_states, reversible = True)
+            
             else:
                 raise ValueError("Rule not recognized")
     
@@ -234,7 +245,6 @@ class Model(HasTraits):
         # Function that returns a list of 2-tuples containing a valid subject and object state pair for an association reaction
         
         # Get the type of signatures required
-        print(reference_signatures)
         count_type = reference_signatures[0].count_type
         
         # Loop through all the possible combinations of subject and object states and store any valid pairs

@@ -118,35 +118,40 @@ def test_Model_generate_network_null(default_Model_instance):
     
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1,2])
+    testgraph.add_nodes_from([1, 2, 3]) # A, R(0), R(1)
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_irr_association(default_Model_instance):
-    dmi = default_Model_instance
+def test_Model_generate_network_irr_association(model_for_matching_tests):
+    mmt = model_for_matching_tests
     
-    #Setup rule for simple drug association - "A associates with R"
-    r1 = bkcc.Rule(dmi)
-    r1.rule_subject = [dmi.drug_list[0]]
-    r1.subject_conf = [None]
-    r1.rule = ' associates with '
-    r1.rule_object = [dmi.protein_list[0]]
-    r1.object_conf = [[]]
-    r1.check_rule_traits()
+    # Has rule for simple drug association - "A associates with R"
     
-    # Attach rule to model and generate network
-    dmi.rule_list = [r1]
-    dmi.generate_network()
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mmt.drug_list[0]]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    mmt.network.main_graph.add_node(s1)
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s2)
     
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1,2,3])
-    testgraph.add_edges_from([(1,3), (2,3)])
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(1, 3), (2, 3)])
+    
+    # Apply the existing association rule, bypass singleton generation with .generate_network() 
+    mmt.apply_rules_to_network()
     
     # Compare shape of graph
-    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph without unwanted dimerization
 def test_Model_generate_network_irr_association_dimers(model_for_matching_tests):
@@ -236,54 +241,66 @@ def test_Model_generate_network_rev_disassociation(model_for_dissociation_matchi
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
     
 # Test that the 'reversibly associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_association(default_Model_instance):
-    dmi = default_Model_instance
+def test_Model_generate_network_rev_association(model_for_matching_tests):
+    mmt = model_for_matching_tests
     
-    #Setup rule for simple drug association - "A reversibly associates with R"
-    r1 = bkcc.Rule(dmi)
-    r1.rule_subject = [dmi.drug_list[0]]
-    r1.subject_conf = [None]
-    r1.rule = ' reversibly associates with '
-    r1.rule_object = [dmi.protein_list[0]]
-    r1.object_conf = [[]]
-    r1.check_rule_traits()
+    # Has rule for simple drug association, modify to reversible association - "A reversibly associates with R"
+    mmt.rule_list[0].rule = ' reversibly associates with '
     
-    # Attach rule to model and generate network
-    dmi.rule_list = [r1]
-    dmi.generate_network()
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mmt.drug_list[0]]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    mmt.network.main_graph.add_node(s1)
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s2)
+        
+    # Apply the existing association rule - "A associates with R"
+    mmt.apply_rules_to_network()
     
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_nodes_from([1, 2, 3])
     testgraph.add_edges_from([(1, 3), (2, 3), (3, 1), (3, 2)])
 
     # Compare shape of graph
-    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
 
 # Test that the ' associates and dissociates in rapid equlibrium with ' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_RE_association(default_Model_instance):
-    dmi = default_Model_instance
+def test_Model_generate_network_rev_RE_association(model_for_matching_tests):
+    mmt = model_for_matching_tests
     
-    #Setup rule for simple drug association - "A associates and dissociates in rapid equlibrium with R"
-    r1 = bkcc.Rule(dmi)
-    r1.rule_subject = [dmi.drug_list[0]]
-    r1.subject_conf = [None]
-    r1.rule = ' associates and dissociates in rapid equlibrium with '
-    r1.rule_object = [dmi.protein_list[0]]
-    r1.object_conf = [[]]
-    r1.check_rule_traits()
+    # Has rule for simple drug association, modify to reversible association - "A reversibly associates with R"
+    mmt.rule_list[0].rule = ' associates and dissociates in rapid equlibrium with '
     
-    # Attach rule to model and generate network
-    dmi.rule_list = [r1]
-    dmi.generate_network()
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = [mmt.drug_list[0]]
+    s1.required_protein_list = []
+    s1.req_protein_conf_lists = []
+    mmt.network.main_graph.add_node(s1)
+    
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s2)
+        
+    # Apply the existing association rule - "A associates with R"
+    mmt.apply_rules_to_network()
     
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1,2,3])
+    testgraph.add_nodes_from([1, 2, 3])
     testgraph.add_edges_from([(1, 3), (2, 3), (3, 1), (3, 2)])
 
     # Compare shape of graph
-    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
 
 # Test that the ' dissociates and reassociates in rapid equlibrium with ' rule creates a valid shaped graph 
 def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_matching):
@@ -310,7 +327,31 @@ def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_mat
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
+
+# Test that the ' converts to  ' rule creates a valid shaped graph 
+def test_Model_convert_state(default_Model_instance):
+    dmi = default_Model_instance
     
+    #Setup rule for a conformational change - R(0) converts to R(1)
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.protein_list[0]]
+    r1.subject_conf = [[0]]
+    r1.rule = ' converts to '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    
+    # Attach rule to model and generate network
+    dmi.rule_list = [r1]
+    dmi.generate_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(2, 3)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
    
 # --------------------- Helper method tests in model.py ---------------------------    
             

@@ -189,9 +189,9 @@ class Rule(HasTraits):
                      ' reversibly dissociates from ',
                      ' associates and dissociates in rapid equlibrium with ',
                      ' dissociates and reassociates in rapid equlibrium from ',
-                     ' converts to state ',
-                     ' reversibly converts to state ',
-                     ' converts in rapid equlibrium to state ',
+                     ' converts to ',
+                     ' reversibly converts to ',
+                     ' converts in rapid equlibrium to ',
                      ' does not exist in the same complex as ',
                      ' can only be in complex along with ']
                      #' is constrained to be the same value as ',
