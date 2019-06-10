@@ -125,11 +125,22 @@ class Model(HasTraits):
             # Conformational changes and reactions
             elif current_rule.rule == ' converts to ':
                 
+                # Get a list of accecptable signatures for the rule and read which type of signature we need
+                # Add converstion signatures
+                reference_signatures = current_rule.generate_signature_list()
+                
                 # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 
+                # Find all possible converstion reaction with the matching states
+                possible_conversion_tuples = self._find_conversion_pairs(reference_signatures, matching_subject_states)
+                
+                # Validate links for possible converstion reactions
+                valid_conversion_tuples = self._find_conversion_internal_link(current_rule, possible_conversion_tuples)
+                # (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
+                
                 # Make the conversion
-                self._create_conversion(graph, matching_subject_states, reversible = True)
+                self._create_conversion(graph, *valid_conversion_tuples, reversible = False)
             
             else:
                 raise ValueError("Rule not recognized")
@@ -366,7 +377,12 @@ class Model(HasTraits):
         # If we arrive here, nothing matched after exhausting the list of reference signatures
         else:
             return False
-
+    
+    def _find_conversion_pairs(reference_signatures, matching_subject_states):
+        # Function that returns a list of 3-tuples containing the subject state, a tuple of indices that corrospond to the rule subject components.
+        
+        return possible_conversion_tuples
+    
     def _create_association(self, graph, subject_state, object_state, new_link, reversible = False):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
@@ -447,7 +463,18 @@ class Model(HasTraits):
         if reversible:
              graph.add_edge(subject_state, object_state)
              graph.add_edge(third_state, object_state)    
-                    
+
+    def _create_conversion(graph, matching_subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False):
+        # Function to convert the given components in the state to those specified by the rule
+        # Creates new states if the generated ones cannot be found in existing graph
+        
+        
+        # Look for a state with the new components and link list
+        # Make a new state if one is not found
+        
+        pass
+        
+
     def _translate_link_tuple(self, link_tuple, translate_dict):
         # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
         if isinstance(link_tuple, int): # Need to handle a single integer element as well

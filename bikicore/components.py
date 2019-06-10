@@ -301,10 +301,12 @@ class Rule(HasTraits):
        
         # Make new list
         signature_list = []
-        # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
+        
+        # Association rules
         if self.rule == ' associates with ' or self.rule == ' reversibly associates with ' \
                     or self.rule == ' associates and dissociates in rapid equlibrium with ':
-                
+            
+            # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better.
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
                 new_sig = CountingSignature('components only')
@@ -339,8 +341,8 @@ class Rule(HasTraits):
                     combinded_third_state_conf = new_sub_conf + new_obj_conf
                     new_sig.count_for_third_state(third_state_comp, combinded_third_state_conf)
                     signature_list.append(new_sig)
-                    
-        # Different rules need different output tuples - Perhaps there is a chance to combine this code with some in the model, but I currently don't know how to refactor it better
+        
+        # Dissociation rules            
         elif self.rule == ' dissociates from ' or self.rule == ' reversibly dissociates from ' \
                 or self.rule == ' dissociates and reassociates in rapid equlibrium from ':
                 
@@ -376,6 +378,40 @@ class Rule(HasTraits):
                     new_sig.third_state_count = new_sig.object_count - new_sig.subject_count # On a counter object, subtracting something that doesn't exist is silently allowed and does not create "negative" objects
                     if new_sig.object_count == new_sig.subject_count + new_sig.third_state_count: # We filter out mismatched subject and object conformations here
                         signature_list.append(new_sig)
+        
+        # Conversion rules
+        elif self.rule == ' converts to ':
+            
+            # If we have all None or [] conformations, this is pretty simple and we return a component only signature
+            if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
+                new_sig = CountingSignature('components only')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                signature_list.append(new_sig)
+            
+            # If we have to worry about about conformations, but there is no "any" conformations ([]), this is also pretty simple
+            elif all([x != [] for x in self.subject_conf]) and all([x != [] for x in self.object_conf]):
+                new_sig = CountingSignature('conformations included')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                signature_list.append(new_sig)
+                
+            # We must have at least one "any" conformation but not all, so we make a list of all possible conformations that could fit the rule
+            else:
+                # Save the lists of components/conformations
+                sub_comp, sub_conf = self.generate_component_list('subject')
+                obj_comp, obj_conf = self.generate_component_list('object')
+                # Get all the possible conformation combinations that can be made
+                new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
+                
+                # Now create signatures from the lists                   
+                print(new_sub_conf_list, new_obj_conf_list)
+                for new_sub_conf, new_obj_conf in zip(new_sub_conf_list, new_obj_conf_list):
+                    new_sig = CountingSignature('conformations included')
+                    new_sig.count_for_subject(sub_comp, new_sub_conf)
+                    new_sig.count_for_object(obj_comp, new_obj_conf)
+                    signature_list.append(new_sig)
+                    
         else:
             raise ValueError("Rule type not recognized")
 
@@ -383,7 +419,9 @@ class Rule(HasTraits):
     
     def _get_all_conformation_combinations(self, sub_conf, obj_conf, sub_comp, obj_comp):
     # Helper method to find all possible combinations of conformations when there is at least one "any" conformation given 
-        
+    
+    # NOTE: Changed to only create single conformations, but not sure if this is what we want in the end. Left multiple conformation code as comments.    
+    
     # Find the "any" conformations
         sub_any_index = []
         for index, current_conf in enumerate(sub_conf):
@@ -405,8 +443,9 @@ class Rule(HasTraits):
         allowed_conf_combos = []
         for allowed_conf in allowed_conformations: # Do this for each list of "any" conformations
             new_combos = []
-            for num_conf in range(1, len(allowed_conf) + 1): # Need to repeat for single, double, etc. allowed number of conformations
-                new_combos.extend(itertools.combinations(allowed_conf, num_conf))
+            new_combos.extend(itertools.combinations(allowed_conf, 1))
+#            for num_conf in range(1, len(allowed_conf) + 1): # Need to repeat for single, double, etc. allowed number of conformations
+#                new_combos.extend(itertools.combinations(allowed_conf, num_conf))
             allowed_conf_combos.append(new_combos) # Add the list of combos to the main list
         
         # Now we construct a list of conformations lists for each combination

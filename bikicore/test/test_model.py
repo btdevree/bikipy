@@ -80,6 +80,22 @@ def model_for_dissociation_matching(default_Model_instance):
     dmi.rule_list = [r1]
     return dmi
 
+# Setup for converstion tests
+@pytest.fixture()
+def default_Model_conversion(default_Model_instance):
+    dmi = default_Model_instance
+    
+    #Setup testing rule for a correct drug dissociation - "R(0) converts to R(1)"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.protein_list[0]]
+    r1.subject_conf = [[0]]
+    r1.rule = ' converts to '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    dmi.rule_list = [r1]
+    return dmi
+
 # ---- Unit tests ----
 
 # --Tests for Model objects--
@@ -328,22 +344,12 @@ def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_mat
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
 
-# Test that the ' converts to  ' rule creates a valid shaped graph 
-def test_Model_convert_state(default_Model_instance):
-    dmi = default_Model_instance
+# Test that the ' converts to ' rule creates a valid shaped graph 
+def test_Model_conversion(default_Model_conversion):
+    dmc = default_Model_conversion
     
-    #Setup rule for a conformational change - R(0) converts to R(1)
-    r1 = bkcc.Rule(dmi)
-    r1.rule_subject = [dmi.protein_list[0]]
-    r1.subject_conf = [[0]]
-    r1.rule = ' converts to '
-    r1.rule_object = [dmi.protein_list[0]]
-    r1.object_conf = [[1]]
-    r1.check_rule_traits()
-    
-    # Attach rule to model and generate network
-    dmi.rule_list = [r1]
-    dmi.generate_network()
+    # Have rule for simple conformational change - R(0) converts to R(1)
+    dmc.generate_network()
 
     # Create comparision graph shape
     testgraph = nx.DiGraph()
@@ -351,7 +357,7 @@ def test_Model_convert_state(default_Model_instance):
     testgraph.add_edges_from([(2, 3)])
     
     # Compare shape of graph
-    assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
+    assert nx.algorithms.isomorphism.is_isomorphic(dmc.network.main_graph, testgraph)
    
 # --------------------- Helper method tests in model.py ---------------------------    
             
