@@ -132,10 +132,10 @@ class Model(HasTraits):
                 # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 
-                # Find all possible converstion reaction with the matching states
+                # Find all possible conversion reactions with the matching states
                 possible_conversion_tuples = self._find_conversion_pairs(reference_signatures, matching_subject_states)
                 
-                # Validate links for possible converstion reactions
+                # Validate links for possible conversion reactions
                 valid_conversion_tuples = self._find_conversion_internal_link(current_rule, possible_conversion_tuples)
                 # (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
                 

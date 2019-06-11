@@ -881,6 +881,30 @@ def test_generate_signature_list_any_conformations_included_conversion(modified_
         sig_list[3].third_state_count[(mpi, (0,))]
         sig_list[3].third_state_count[(mpi, (1,))]
 
+# Test if the generate_signature_list gives back correct signatures
+def test_generate_signature_list_any_to_conf_conversion(default_Model_irreversible_conversion, default_Protein_instance):
+    dmi = default_Model_irreversible_conversion
+    dpi = default_Protein_instance # For typing convenience
+    r1 = dmi.rule_list[0]
+
+    # We have rule R([0]) converts to R([1]), modify to R([]) converts to R([1])"
+    r1.rule_subject = [dpi]
+    r1.subject_conf = [[]]
+    r1.rule_object = [dpi]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    sig_list = r1.generate_signature_list()
+    
+    # Expect one signature
+    assert len(sig_list) == 1
+    assert sig_list[0].count_type == 'conformations included'
+    assert sig_list[0].subject_count[(dpi, (0,))] == 1
+    assert sig_list[0].subject_count[(dpi, (1,))] == 0
+    assert sig_list[0].object_count[(dpi, (0,))] == 0
+    assert sig_list[0].object_count[(dpi, (1,))] == 1
+    with pytest.raises(TypeError): # counter will still be set to None
+        sig_list[0].third_state_count[(dpi, (0,))]
+        sig_list[0].third_state_count[(dpi, (1,))]
 # ------Tests for Network objects------
 
 #Test if Network objects have the required properties

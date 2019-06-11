@@ -405,12 +405,14 @@ class Rule(HasTraits):
                 new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
                 
                 # Now create signatures from the lists                   
-                print(new_sub_conf_list, new_obj_conf_list)
                 for new_sub_conf, new_obj_conf in zip(new_sub_conf_list, new_obj_conf_list):
                     new_sig = CountingSignature('conformations included')
                     new_sig.count_for_subject(sub_comp, new_sub_conf)
                     new_sig.count_for_object(obj_comp, new_obj_conf)
-                    signature_list.append(new_sig)
+                    
+                    # We don't want to add a signature that doesn't change anything between the states
+                    if new_sig.subject_count - new_sig.object_count != Counter() or new_sig.object_count - new_sig.subject_count != Counter(): # Could have dissapearing states, check subtraction in both directions
+                        signature_list.append(new_sig)
                     
         else:
             raise ValueError("Rule type not recognized")

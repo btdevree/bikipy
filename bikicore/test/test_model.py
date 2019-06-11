@@ -1072,5 +1072,40 @@ def test_collect_link_components(model_for_dissociation_matching, default_Protei
     # Run fuction with a invalid argument
     with pytest.raises(ValueError):
         test_comp, test_conf = mdm._collect_link_components((1, 1.1), ref_comp_list, ref_conf_list)
+        
+# Test that we return valid state and conversion index pairs with a simple signature
+def test_find_conversion_pairs(default_Model_conversion, default_Protein_instance, default_Drug_instance):
+    dmc = default_Model_conversion
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmc.rule_list[0]
+    
+    # We have rule R([0]) converts to R([1])
+    ref_sig = r1.generate_signature_list()
+    
+    # Make some states
+    s1 = bkcc.State() # Doesn't work - no protein
+    s1.required_drug_list = [ddi]
+    
+    s2 = bkcc.State()  # Doesn't work - wrong conformation
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0,1]]
+    
+    s3 = bkcc.State() # Doesn't work - no conformation change
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[1]]
+    
+    s4 = bkcc.State() # Should work
+    s4.required_protein_list = [dpi]
+    s4.req_protein_conf_lists = [[0]]
+    
+    # Make some state lists
+    test_obj_list = [s1, s2, s3, s4]
+    
+    # Run function
+    valid_tuples = dmc._find_dissociation_pairs(ref_sig, test_obj_list)
+
+    # Check if we got the expected result
+    assert valid_tuples == [(s4, (0,))]
 
        
