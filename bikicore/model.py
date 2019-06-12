@@ -132,7 +132,7 @@ class Model(HasTraits):
                 # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 
-                # Find all possible conversion reactions with the matching states
+                # Find all possible conversion reactions with the matching states, returns the components involved and what they change to, but not the internal structure
                 possible_conversion_tuples = self._find_conversion_pairs(reference_signatures, matching_subject_states)
                 
                 # Validate links for possible conversion reactions
@@ -378,10 +378,56 @@ class Model(HasTraits):
         else:
             return False
     
-    def _find_conversion_pairs(reference_signatures, matching_subject_states):
-        # Function that returns a list of 3-tuples containing the subject state, a tuple of indices that corrospond to the rule subject components.
+    def _find_conversion_pairs(self, reference_signatures, matching_subject_states):
+        # Function that returns a list of 4-tuples containing the subject state, a Counter dictionary of the components to convert to.
         
-        return possible_conversion_tuples
+        # Get the type of signatures required
+        count_type = reference_signatures[0].count_type
+        
+        # Loop through all the found object states and store any valid splitting of components
+        valid_pairs = []
+        for current_sub in matching_subject_states:
+            sub_comp_list, sub_conf_list = current_sub.generate_component_list()
+            
+            # Look for matches with each conversion signature
+            for current_sig in reference_signatures:
+                
+                # Test all possible sets of indices for the conversion
+                number_indices_needed = len([*current_sig.subject_count.elements()])
+                for current_indices in itertools.combinations(range(0, len(sub_comp_list)), number_indices_needed):
+                    
+                    # Get lists of anything that's not tagged as being converted with the indices
+                    nonconvert_comp_list = [x for x, i in enumerate(sub_comp_list) if i not in current_indices]
+                    nonconvert_conf_list = [x for x, i in enumerate(sub_conf_list) if i not in current_indices]
+                    
+                    # Make a new signature with the converted components
+                    test_signature = bkcc.CountingSignature(count_type, subject_state = current_sub)
+                    test_signature.count_for_object(nonconvert_comp_list, nonconvert_conf_list)
+                    test_signature.object_count += current_sig.object_count # Add the converted components to the signature
+                    
+                    # See if the test signature matches the reference
+                    if self._signature_match_conversion(test_signature, current_sig):
+                        valid_pairs.append((current_sub, current_indices, current_sig.object_count))
+        
+        # Give the list of tuples back
+        return valid_pairs
+        
+    def _signature_match_conversion(self, query_signature, reference_signatures):
+        # Helper function that asks if a given query signature matches the reference signature in a conversion context
+        # Returns True or False
+       
+        # Get the difference between reference states
+        ref_fwd_diff = reference_signature.subject_count - reference_signature.object_count
+        ref_rev_diff = reference_signature.object_count - reference_signature.subject_count
+        
+        # Get the difference between query states states
+        query_fwd_diff = query_signature.subject_count - query_signature.object_count
+        query_rev_diff = query_signature.object_count - query_signature.subject_count
+        
+        if ref_fwd_diff == query_fwd_diff and ref_rev_diff == query_rev_diff:
+            return True
+        else:
+            return False
     
     def _create_association(self, graph, subject_state, object_state, new_link, reversible = False):
         # Function to connect two states into an association relationship on the given graph
