@@ -398,7 +398,7 @@ class Model(HasTraits):
                     
                     # Get lists of anything that's not tagged as being converted with the indices
                     nonconvert_comp_list = [x for x, i in enumerate(sub_comp_list) if i not in current_indices]
-                    nonconvert_conf_list = [x for x, i in enumerate(sub_conf_list) if i not in current_indices]
+                    nonconvert_conf_list = [[x] for x, i in enumerate(sub_conf_list) if i not in current_indices]
                     
                     # Make a new signature with the converted components
                     test_signature = bkcc.CountingSignature(count_type, subject_state = current_sub)
@@ -412,7 +412,7 @@ class Model(HasTraits):
         # Give the list of tuples back
         return valid_pairs
         
-    def _signature_match_conversion(self, query_signature, reference_signatures):
+    def _signature_match_conversion(self, query_signature, reference_signature):
         # Helper function that asks if a given query signature matches the reference signature in a conversion context
         # Returns True or False
        
