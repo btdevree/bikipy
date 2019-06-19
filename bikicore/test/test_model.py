@@ -1021,6 +1021,36 @@ def test_find_dissociation_internal_link(model_for_dissociation_matching, defaul
     assert state1_links == []
     assert state2_links == [(0, 1)] # In state2 index numbers
     
+# Test if the internal link finding/testing function returns the expected result for a simple conversion case       
+def test_find_conversion_simple_internal_link(default_Model_conversion, default_Protein_instance, default_Drug_instance):
+    dmc = default_Model_conversion   
+    dpi = default_Protein_instance     
+    ddi = default_Drug_instance # For typing convenience
+    
+    # We have rule R([0]) converts to R([1])
+    
+    # Make a state
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0], [0]]
+    s1.internal_links = [(0, 1)]
+    
+    # Run function
+    #(current_sub, current_indices, convert_rule_components, current_convert_conf)
+    possible_tuples = [(s1, (1,), [dpi], [[1]]), (s1, (2,), [dpi], [[1]])]
+    test_results = dmc._find_dissociation_internal_link(dmc.rule_list[0], possible_tuples)
+
+    # Test output (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
+    assert test_results[0][0] == s1
+    assert test_results[0][1] == [ddi, dpi, dpi]
+    assert test_results[0][2] == [None, [0], [1]]
+    assert test_results[0][3] == [(0, 2)]
+    assert test_results[1][0] == s1
+    assert test_results[1][1] == [ddi, dpi, dpi]
+    assert test_results[1][2] == [None, [0], [1]]
+    assert test_results[1][3] == [(0, 1)]
+    
  # Tests if the broken link is consistant with a dissociation rule
 def test_compare_components_dissociation_rule_and_link(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
     mdm = model_for_dissociation_matching    

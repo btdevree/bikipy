@@ -125,7 +125,7 @@ class Model(HasTraits):
             # Conformational changes and reactions
             elif current_rule.rule == ' converts to ':
                 
-                # Get a list of accecptable signatures for the rule and read which type of signature we need
+                # Get a list of acceptable signatures for the rule and read which type of signature we need
                 # Add converstion signatures
                 reference_signatures = current_rule.generate_signature_list()
                 
@@ -133,8 +133,8 @@ class Model(HasTraits):
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 
                 # Find all possible conversion reactions with the matching states, returns the components involved and what they change to, but not the internal structure
-                possible_conversion_tuples = self._find_conversion_pairs(reference_signatures, matching_subject_states)
-                
+                possible_conversion_tuples = self._find_conversion_pairs(current_rule, reference_signatures, matching_subject_states)
+
                 # Validate links for possible conversion reactions
                 valid_conversion_tuples = self._find_conversion_internal_link(current_rule, possible_conversion_tuples)
                 # (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
@@ -378,17 +378,18 @@ class Model(HasTraits):
         else:
             return False
     
-    def _find_conversion_pairs(self, reference_signatures, matching_subject_states):
-        # Function that returns a list of 4-tuples containing the subject state, a Counter dictionary of the components to convert to.
+    def _find_conversion_pairs(self, rule, reference_signatures, matching_subject_states):
+        # Function that returns a list of 4-tuples containing the subject state, indices of the changed components, and lists of converted components and conformations.
         
         # Get the type of signatures required
         count_type = reference_signatures[0].count_type
+        convert_rule_components, convert_rule_conformations = rule.generate_component_list('object')
         
         # Loop through all the found object states and store any valid splitting of components
         valid_pairs = []
         for current_sub in matching_subject_states:
             sub_comp_list, sub_conf_list = current_sub.generate_component_list()
-            
+
             # Look for matches with each conversion signature
             for current_sig in reference_signatures:
                 
@@ -397,17 +398,20 @@ class Model(HasTraits):
                 for current_indices in itertools.combinations(range(0, len(sub_comp_list)), number_indices_needed):
                     
                     # Get lists of anything that's not tagged as being converted with the indices
-                    nonconvert_comp_list = [x for x, i in enumerate(sub_comp_list) if i not in current_indices]
-                    nonconvert_conf_list = [[x] for x, i in enumerate(sub_conf_list) if i not in current_indices]
+                    nonconvert_comp_list = [x for i, x in enumerate(sub_comp_list) if i not in current_indices]
+                    nonconvert_conf_list = [x for i, x in enumerate(sub_conf_list) if i not in current_indices]
                     
-                    # Make a new signature with the converted components
-                    test_signature = bkcc.CountingSignature(count_type, subject_state = current_sub)
-                    test_signature.count_for_object(nonconvert_comp_list, nonconvert_conf_list)
-                    test_signature.object_count += current_sig.object_count # Add the converted components to the signature
-                    
-                    # See if the test signature matches the reference
-                    if self._signature_match_conversion(test_signature, current_sig):
-                        valid_pairs.append((current_sub, current_indices, current_sig.object_count))
+                    # Make lists of new components/conformations and see if they create a matching signature
+                    ignored_output, convert_conf_lists = rule._get_all_conformation_combinations([], convert_rule_conformations, [], convert_rule_components)   
+                    for current_convert_conf in convert_conf_lists:
+                        
+                        # Make a new signature with the converted components
+                        test_signature = bkcc.CountingSignature(count_type, subject_state = current_sub) 
+                        test_signature.count_for_object(nonconvert_comp_list + convert_rule_components, nonconvert_conf_list + current_convert_conf) # Add the converted components to the signature
+                        
+                        # See if the test signature matches the reference
+                        if self._signature_match_conversion(test_signature, current_sig):
+                            valid_pairs.append((current_sub, current_indices, convert_rule_components, current_convert_conf))
         
         # Give the list of tuples back
         return valid_pairs
@@ -829,6 +833,10 @@ class Model(HasTraits):
         # Send back the list of things that should work
         return valid_state_split_tuples, valid_link_tuples
     
+    def _find_conversion_internal_link(self, rule, possible_conversion_tuples):
+    # Function to check if the internal link structure of indicated conversion could be described by rule.
+
+    return [!!!!!!!!!!!!(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
