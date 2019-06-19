@@ -835,8 +835,27 @@ class Model(HasTraits):
     
     def _find_conversion_internal_link(self, rule, possible_conversion_tuples):
     # Function to check if the internal link structure of indicated conversion could be described by rule.
+    
+        # Work through each tuple of possible solutions and figure out if the internal links could work.
+        valid_conversion_tuples = []
+        for current_possible_tuple in possible_conversion_tuples:
+            subject_state, conversion_indices, converted_components, converted_conformations = current_possible_tuple
+            
+            # Can only deal with 1 to 1 component converstion for the moment
+            if not len(conversion_indices) == len(converted_components):
+                raise NotImplementedError("Conversion rules not yet able to handle reactions with changing numbers of components")
+           
+            # Get lists of anything that's not tagged as being converted with the indices
+            sub_comp_list, sub_conf_list = subject_state.generate_component_list()
+            nonconvert_comp_list = [x for i, x in enumerate(sub_comp_list) if i not in conversion_indices]
+            nonconvert_conf_list = [x for i, x in enumerate(sub_conf_list) if i not in conversion_indices]
+            
+            # Test all possible correspondences from coverted components to origonal components
+            #index_translations = c
+            #Itertools combos, test for rule following, add if right
+            raise
+        return [(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)]
 
-    return [!!!!!!!!!!!!(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
