@@ -845,17 +845,30 @@ class Model(HasTraits):
             if not len(conversion_indices) == len(converted_components):
                 raise NotImplementedError("Conversion rules not yet able to handle reactions with changing numbers of components")
 
+            # The components being converted must all be somehow linked directly to match the rule
+            # Split the state to get the converted components by themselves
+            broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
+            
+            # See if the conversion links have at least one mention of each component
+            if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
+                found_link_list = []
+                for convert_index in range(len(conversion_indices)):
+                    found_link_list.append(self._index_tuple_element_any_split_test(conversion_links, [convert_index]))
+                if not all(found_link_list):
+                    continue # Failed, short-circult test to try next tuple of possible conversions
+            
             # Test all possible correspondences from coverted components to original components
             index_translations = itertools.combinations(conversion_indices)
             for current_translation_indices in index_translations:
                  
-                # Get lists of all the peices and replace the indicated components
+                # Get lists of all the pieces and replace the indicated components
                 new_comp_list, new_conf_list = subject_state.generate_component_list()
                 for convert_index, old_index in enumerate(current_translation_indices):
                     new_comp_list[old_index] = converted_components[convert_index]
                     new_conf_list[old_index] = converted_conformations[convert_index]
                 
                 # Test for rule following, add if right
+                
             raise
         return [(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)]
 
