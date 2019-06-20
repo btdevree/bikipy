@@ -841,18 +841,21 @@ class Model(HasTraits):
         for current_possible_tuple in possible_conversion_tuples:
             subject_state, conversion_indices, converted_components, converted_conformations = current_possible_tuple
             
-            # Can only deal with 1 to 1 component converstion for the moment
+            # Can only deal with 1 to 1 component conversion for the moment
             if not len(conversion_indices) == len(converted_components):
                 raise NotImplementedError("Conversion rules not yet able to handle reactions with changing numbers of components")
-           
-            # Get lists of anything that's not tagged as being converted with the indices
-            sub_comp_list, sub_conf_list = subject_state.generate_component_list()
-            nonconvert_comp_list = [x for i, x in enumerate(sub_comp_list) if i not in conversion_indices]
-            nonconvert_conf_list = [x for i, x in enumerate(sub_conf_list) if i not in conversion_indices]
-            
-            # Test all possible correspondences from coverted components to origonal components
-            #index_translations = c
-            #Itertools combos, test for rule following, add if right
+
+            # Test all possible correspondences from coverted components to original components
+            index_translations = itertools.combinations(conversion_indices)
+            for current_translation_indices in index_translations:
+                 
+                # Get lists of all the peices and replace the indicated components
+                new_comp_list, new_conf_list = subject_state.generate_component_list()
+                for convert_index, old_index in enumerate(current_translation_indices):
+                    new_comp_list[old_index] = converted_components[convert_index]
+                    new_conf_list[old_index] = converted_conformations[convert_index]
+                
+                # Test for rule following, add if right
             raise
         return [(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)]
 
