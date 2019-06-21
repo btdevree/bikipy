@@ -858,7 +858,7 @@ class Model(HasTraits):
                     continue # Failed, short-circult test to try next tuple of possible conversions
             
             # Test all possible correspondences from coverted components to original components
-            index_translations = itertools.combinations(conversion_indices)
+            index_translations = itertools.permutations(conversion_indices)
             for current_translation_indices in index_translations:
                  
                 # Get lists of all the pieces and replace the indicated components
@@ -867,7 +867,7 @@ class Model(HasTraits):
                     new_comp_list[old_index] = converted_components[convert_index]
                     new_conf_list[old_index] = converted_conformations[convert_index]
                 
-                # Test for rule following, add if right
+                # Test for which 
                 
             raise
         return [(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)]
