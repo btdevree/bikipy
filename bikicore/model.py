@@ -623,6 +623,28 @@ class Model(HasTraits):
             raise ValueError("Function received unexpected values in the query_tuple_element parameter")
         
         return previous_component_list, previous_conformation_list
+    
+    def _collect_link_values(self, tuple_element, previous_element_list = None):
+        # Generator expression to collect index values from complex tuple trees
+        
+        # Need to make new list if none passed in call
+        if previous_element_list == None:
+            previous_element_list = []            
+        
+        # Recursive testing if we have a tuple of values single index value
+        if isinstance(tuple_element, tuple) or isinstance(tuple_element, list):
+            for element in tuple_element:
+                previous_element_list = self._collect_link_values(element, previous_element_list) 
+    
+        # Otherwise, get the referenced component/conformation by the index value 
+        elif isinstance(tuple_element, int):
+            previous_element_list.append(tuple_element)
+            
+        # Don't want to silently accecpt bad argurments
+        else:
+            raise ValueError("Function received unexpected values of type {} in the tuple_element parameter".format(str(type(tuple_element))))
+        
+        return previous_element_list
             
     def _combine_internal_link_lists(self, state_1, state_2, return_translation_dicts = False):
         # Function to translate the link lists from states 1 and 2 into that of the associated state
@@ -860,15 +882,9 @@ class Model(HasTraits):
             # Split the state to get the converted components by themselves
             broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
             
-            print(subject_state, conversion_indices, converted_components, converted_conformations)
-            print(broken_links, conversion_links, nonconvert_links)
-            
             # See if the conversion links have at least one mention of each component
             if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
-                found_link_list = []
-                for convert_index in range(len(conversion_indices)):
-                    found_link_list.append(self._index_tuple_element_any_split_test(conversion_links, [convert_index]))
-                if not all(found_link_list):
+                if not all([x in self._collect_link_values(conversion_links) for x in conversion_indices]):
                     continue # Failed, short-circult test to try next tuple of possible conversions
             
             # Test all possible permutations of the index order, we don't know which one is right yet
