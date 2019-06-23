@@ -137,10 +137,10 @@ class Model(HasTraits):
 
                 # Validate links for possible conversion reactions
                 valid_conversion_tuples = self._find_conversion_internal_link(current_rule, possible_conversion_tuples)
-                # (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
                 
                 # Make the conversion
-                self._create_conversion(graph, *valid_conversion_tuples, reversible = False)
+                for convert_tuple in valid_conversion_tuples:
+                    self._create_conversion(graph, *convert_tuple, reversible = False)
             
             else:
                 raise ValueError("Rule not recognized")
@@ -514,16 +514,27 @@ class Model(HasTraits):
              graph.add_edge(subject_state, object_state)
              graph.add_edge(third_state, object_state)    
 
-    def _create_conversion(graph, matching_subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False):
+    def _create_conversion(self, graph, subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False):
         # Function to convert the given components in the state to those specified by the rule
         # Creates new states if the generated ones cannot be found in existing graph
         
+        # See if the object state already exists in the graph
+        for current_state in graph.__iter__():
+            if self._state_match_to_component_lists(current_state, new_component_list, new_conformation_list, new_link_tuples, match = 'exact'):
+                # If the state already exists, use it
+                object_state = current_state
+                break
         
-        # Look for a state with the new components and link list
-        # Make a new state if one is not found
-        
-        pass
-        
+        # If no valid subject state alreay exists, create a new one
+        else: # no break
+            object_state = bkcc.State()
+            object_state.add_component_list(new_component_list, new_conformation_list)
+            object_state.internal_links = new_link_tuples
+            
+        # Add edges to convert states (NetworkX will add any states that don't alreay exist in the graph)
+        graph.add_edge(subject_state, object_state)
+        if reversible:
+             graph.add_edge(object_state, subject_state)          
 
     def _translate_link_tuple(self, link_tuple, translate_dict):
         # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
@@ -835,7 +846,7 @@ class Model(HasTraits):
     
     def _find_conversion_internal_link(self, rule, possible_conversion_tuples):
     # Function to check if the internal link structure of indicated conversion could be described by rule.
-    
+
         # Work through each tuple of possible solutions and figure out if the internal links could work.
         valid_conversion_tuples = []
         for current_possible_tuple in possible_conversion_tuples:
@@ -849,6 +860,9 @@ class Model(HasTraits):
             # Split the state to get the converted components by themselves
             broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
             
+            print(subject_state, conversion_indices, converted_components, converted_conformations)
+            print(broken_links, conversion_links, nonconvert_links)
+            
             # See if the conversion links have at least one mention of each component
             if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
                 found_link_list = []
@@ -857,20 +871,34 @@ class Model(HasTraits):
                 if not all(found_link_list):
                     continue # Failed, short-circult test to try next tuple of possible conversions
             
-            # Test all possible correspondences from coverted components to original components
+            # Test all possible permutations of the index order, we don't know which one is right yet
             index_translations = itertools.permutations(conversion_indices)
             for current_translation_indices in index_translations:
                  
-                # Get lists of all the pieces and replace the indicated components
+                # Get lists of components/conformations to compare
                 new_comp_list, new_conf_list = subject_state.generate_component_list()
-                for convert_index, old_index in enumerate(current_translation_indices):
-                    new_comp_list[old_index] = converted_components[convert_index]
-                    new_conf_list[old_index] = converted_conformations[convert_index]
+                rule_comp_list, rule_conf_list = rule.generate_component_list('subject')
                 
-                # Test for which 
+                # See if all the ordered components in the rule match with those from the state
+                match_list = []
+                for rule_index, state_index in enumerate(current_translation_indices):
+                    match_list.append(new_comp_list[state_index] == rule_comp_list[rule_index])
+                    if not rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                        match_list.append(new_conf_list[state_index] == rule_conf_list[rule_index])
                 
-            raise
-        return [(matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)]
+                # If they all match, make the converstion and add to the converstion tuple list
+                if all(match_list):
+                    converted_rule_comp_list, converted_rule_conf_list = rule.generate_component_list('object')
+                    for rule_index, state_index in enumerate(current_translation_indices):
+                        new_comp_list[state_index] = converted_rule_comp_list[rule_index]
+                        if not converted_rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                            new_conf_list[state_index] = converted_rule_conf_list[rule_index]
+                    
+                    # Add to the working converstion tuples, links not changed yet (but might be if we implement non-1:1 conversions)
+                    valid_conversion_tuples.append((subject_state, new_comp_list, new_conf_list, subject_state.internal_links))
+                
+        # Give back the list of stuff that should be working
+        return valid_conversion_tuples
 
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):

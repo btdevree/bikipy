@@ -80,7 +80,7 @@ def model_for_dissociation_matching(default_Model_instance):
     dmi.rule_list = [r1]
     return dmi
 
-# Setup for converstion tests
+# Setup for conversion tests
 @pytest.fixture()
 def default_Model_conversion(default_Model_instance):
     dmi = default_Model_instance
@@ -1039,17 +1039,53 @@ def test_find_conversion_simple_internal_link(default_Model_conversion, default_
     # Run function
     #(current_sub, current_indices, convert_rule_components, current_convert_conf)
     possible_tuples = [(s1, (1,), [dpi], [[1]]), (s1, (2,), [dpi], [[1]])]
-    test_results = dmc._find_dissociation_internal_link(dmc.rule_list[0], possible_tuples)
+    test_results = dmc._find_conversion_internal_link(dmc.rule_list[0], possible_tuples)
 
     # Test output (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
+    # Both R components should be able to be converted - NOTE: conversion of both required re-running the rule on the new graph
+    assert len(test_results) == 2
     assert test_results[0][0] == s1
     assert test_results[0][1] == [ddi, dpi, dpi]
-    assert test_results[0][2] == [None, [0], [1]]
-    assert test_results[0][3] == [(0, 2)]
+    assert test_results[0][2] == [None, [1], [0]]
+    assert test_results[0][3] == [(0, 1)]
     assert test_results[1][0] == s1
     assert test_results[1][1] == [ddi, dpi, dpi]
     assert test_results[1][2] == [None, [0], [1]]
     assert test_results[1][3] == [(0, 1)]
+    
+# Test if the internal link finding/testing function returns the expected result for a more complex conversion case       
+def test_find_conversion_complex_internal_link(default_Model_conversion, default_Protein_instance, default_Drug_instance):
+    dmc = default_Model_conversion   
+    dpi = default_Protein_instance     
+    ddi = default_Drug_instance # For typing convenience
+    r1 = dmc.rule_list[0]
+    
+    # We have rule R([0]) converts to R([1]), change to require binding of A
+    r1.rule_subject = [ddi, dpi]
+    r1.subject_conf = [None, [0]]
+    r1.rule_object = [ddi, dpi]
+    r1.object_conf = [None, [1]]
+    r1.check_rule_traits()
+
+    # Make a state
+    s1 = bkcc.State()
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi, dpi]
+    s1.req_protein_conf_lists = [[0], [0]]
+    s1.internal_links = [(0, 1)]
+    
+    # Run function
+    #(current_sub, current_indices, convert_rule_components, current_convert_conf)
+    possible_tuples = [(s1, (0, 1), [ddi, dpi], [None, [1]]), (s1, (0, 2), [ddi, dpi], [None, [1]])]
+    test_results = dmc._find_conversion_internal_link(dmc.rule_list[0], possible_tuples)
+
+    # Test output (matching_subject_state, new_component_list, new_conformation_list, new_link_tuples)
+    # Only the R bound to A should be allowed to convert
+    assert len(test_results) == 1
+    assert test_results[0][0] == s1
+    assert test_results[0][1] == [ddi, dpi, dpi]
+    assert test_results[0][2] == [None, [1], [0]]
+    assert test_results[0][3] == [(0, 1)]
     
  # Tests if the broken link is consistant with a dissociation rule
 def test_compare_components_dissociation_rule_and_link(model_for_dissociation_matching, default_Protein_instance, default_Drug_instance):
@@ -1133,9 +1169,12 @@ def test_find_conversion_pairs(default_Model_conversion, default_Protein_instanc
     test_obj_list = [s1, s2, s3, s4]
     
     # Run function
-    valid_tuples = dmc._find_dissociation_pairs(ref_sig, test_obj_list)
+    test_results = dmc._find_conversion_pairs(r1, ref_sig, test_obj_list)
 
     # Check if we got the expected result
-    assert valid_tuples == [(s4, (0,))]
-
+    assert len(test_results) == 1
+    assert test_results[0][0] == s4
+    assert test_results[0][1] == (0,)
+    assert test_results[0][2] == [dpi]
+    assert test_results[0][3] == [[1]]
        
