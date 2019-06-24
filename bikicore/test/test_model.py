@@ -358,6 +358,40 @@ def test_Model_conversion(default_Model_conversion):
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(dmc.network.main_graph, testgraph)
+    
+# Test that the '' reversibly converts to ' rule creates a valid shaped graph 
+def test_Model_rev_conversion(default_Model_conversion):
+    dmc = default_Model_conversion
+    
+    # Have rule for simple conformational change - R(0) converts to R(1), edit to be reversible
+    dmc.rule_list[0].rule = ' reversibly converts to '
+    dmc.generate_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(2, 3), (3, 2)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmc.network.main_graph, testgraph)
+   
+    
+# Test that the '' converts in rapid equlibrium to ' rule creates a valid shaped graph 
+def test_Model_RE_conversion(default_Model_conversion):
+    dmc = default_Model_conversion
+    
+    # Have rule for simple conformational change - R(0) converts to R(1), edit to be reversible in rapid equlibrium
+    dmc.rule_list[0].rule = ' converts in rapid equlibrium to '
+    dmc.generate_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3])
+    testgraph.add_edges_from([(2, 3), (3, 2)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dmc.network.main_graph, testgraph)
+   
    
 # --------------------- Helper method tests in model.py ---------------------------    
             

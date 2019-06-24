@@ -123,7 +123,8 @@ class Model(HasTraits):
                         self._create_dissociation(graph, *current_state_split_tuple, *current_link_tuple, reversible = True)
             
             # Conformational changes and reactions
-            elif current_rule.rule == ' converts to ':
+            elif current_rule.rule == ' converts to ' or current_rule.rule == ' reversibly converts to ' \
+                    or current_rule.rule == ' converts in rapid equlibrium to ':
                 
                 # Get a list of acceptable signatures for the rule and read which type of signature we need
                 # Add converstion signatures
@@ -140,7 +141,12 @@ class Model(HasTraits):
                 
                 # Make the conversion
                 for convert_tuple in valid_conversion_tuples:
-                    self._create_conversion(graph, *convert_tuple, reversible = False)
+                    if current_rule.rule == ' converts to ':
+                        self._create_conversion(graph, *convert_tuple)
+                    if current_rule.rule == ' reversibly converts to ':
+                        self._create_conversion(graph, *convert_tuple, reversible = True) 
+                    if current_rule.rule == ' converts in rapid equlibrium to ':
+                        self._create_conversion(graph, *convert_tuple, reversible = True) 
             
             else:
                 raise ValueError("Rule not recognized")

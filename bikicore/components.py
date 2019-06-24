@@ -380,7 +380,8 @@ class Rule(HasTraits):
                         signature_list.append(new_sig)
         
         # Conversion rules
-        elif self.rule == ' converts to ':
+        elif self.rule == ' converts to ' or self.rule == ' reversibly converts to ' \
+                or self.rule == ' converts in rapid equlibrium to ':
             
             # If we have all None or [] conformations, this is pretty simple and we return a component only signature
             if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
