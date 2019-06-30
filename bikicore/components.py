@@ -192,8 +192,8 @@ class Rule(HasTraits):
                      ' converts to ',
                      ' reversibly converts to ',
                      ' converts in rapid equlibrium to ',
-                     ' does not exist in the same complex as ',
-                     ' can only be in complex along with ']
+                     ' is competitive with ',
+                     ' can only bind along with ']
                      #' is constrained to be the same value as ',
                      #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
     rule = Enum(*_rule_choices)
@@ -414,7 +414,12 @@ class Rule(HasTraits):
                     # We don't want to add a signature that doesn't change anything between the states
                     if new_sig.subject_count - new_sig.object_count != Counter() or new_sig.object_count - new_sig.subject_count != Counter(): # Could have dissapearing states, check subtraction in both directions
                         signature_list.append(new_sig)
-                    
+        
+         
+        # Competition rule
+        elif self.rule == ' is competitive with ':   
+            pass
+        
         else:
             raise ValueError("Rule type not recognized")
 

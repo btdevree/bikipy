@@ -4,6 +4,8 @@
 import uuid
 import itertools
 import networkx as nx
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import bikipy.bikicore.components as bkcc
 from traits.api import HasTraits, Int, Str, Instance, This, List
 
@@ -35,7 +37,7 @@ class Model(HasTraits):
         # Code to duplicate the structure of a model with new objects
         pass           
     
-    def generate_network(self):
+    def generate_network(self, max_cycles=20):
         # Create a new network graph of the model by using the list of rules. 
         
         # Create a new Network object
@@ -56,8 +58,23 @@ class Model(HasTraits):
                 new_state.req_protein_conf_lists = [[current_conformation]]
                 self.network.main_graph.add_node(new_state)
         
-        # After creating the singleton graph, build the network with the given rules
-        self.apply_rules_to_network()
+        # After creating the singleton graph, reapply the network rules until no more changes happen
+        old_network = self.network.main_graph.copy()
+        current_cycle_number = 0
+        while current_cycle_number <= max_cycles:
+            self.apply_rules_to_network()
+#            self._main_graph_dump('Graph_0')
+#            print('Graph size = ', self.network.main_graph.number_of_nodes())
+            # Check if graph changed
+            if nx.algorithms.isomorphism.is_isomorphic(old_network, self.network.main_graph):
+#                self._main_graph_dump('Final_graph')
+#                print('Graph size = ', self.network.main_graph.number_of_nodes())
+                break
+            else:
+                old_network = self.network.main_graph.copy()
+                current_cycle_number += 1
+#                self._main_graph_dump('Graph_' + str(current_cycle_number))
+#                print('Graph size = ', self.network.main_graph.number_of_nodes())
         
     def apply_rules_to_network(self, graph = None):
         # Apply the model's rules to an existing graph
@@ -146,7 +163,20 @@ class Model(HasTraits):
                     if current_rule.rule == ' reversibly converts to ':
                         self._create_conversion(graph, *convert_tuple, reversible = True) 
                     if current_rule.rule == ' converts in rapid equlibrium to ':
-                        self._create_conversion(graph, *convert_tuple, reversible = True) 
+                        self._create_conversion(graph, *convert_tuple, reversible = True)
+            
+            # Competition rule
+            elif current_rule.rule == ' is competitive with ':   
+                
+                # Find states that fit the rule description
+                matching_subject_states = self._find_states_that_match_rule(current_rule, 'both')
+               
+                # Validate links for matching states
+                states_to_remove = self._find_competition_internal_link(current_rule, matching_subject_states)
+                
+                # Make the conversion
+                for current_state in states_to_remove:
+                    self._remove_state(graph, states_to_remove)
             
             else:
                 raise ValueError("Rule not recognized")
@@ -200,7 +230,7 @@ class Model(HasTraits):
             else: #no break
                 # If we arrive here, there was not a matching link
                 return False # Short-circut answer
-         
+
         # Get the components and conformations that the state requires
         query_component_list, query_conformation_list = query_state.generate_component_list()
         
@@ -921,7 +951,66 @@ class Model(HasTraits):
                 
         # Give back the list of stuff that should be working
         return valid_conversion_tuples
+    
+    def _find_competition_internal_link(self, rule, matching_subject_states):
+    # Function to check if the internal link structure of indicated competitive states is valid.
 
+        # Work through each tuple of possible solutions and figure out if the internal links could match.
+        valid_competitive_states = []
+        for current_state in matching_subject_states:
+            
+            # Which components are referenced by the rule
+            rule_comp_sub, rule_conf_sub = rule.generate_component_list('subject')
+            rule_comp_obj, rule_conf_obj = rule.generate_component_list('object')
+            
+            # Test all combinations of subject and object states
+            = 
+            
+            # The competitive comonents must all be linked directly to the same thing
+            # Split the state to get the converted components by themselves
+            broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
+            
+            # See if the conversion links have at least one mention of each component
+            if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
+                if not all([x in self._collect_link_values(conversion_links) for x in conversion_indices]):
+                    continue # Failed, short-circult test to try next tuple of possible conversions
+            
+            # Test all possible permutations of the index order, we don't know which one is right yet
+            index_translations = itertools.permutations(conversion_indices)
+            for current_translation_indices in index_translations:
+                 
+                # Get lists of components/conformations to compare
+                new_comp_list, new_conf_list = subject_state.generate_component_list()
+                rule_comp_list, rule_conf_list = rule.generate_component_list('subject')
+                
+                # See if all the ordered components in the rule match with those from the state
+                match_list = []
+                for rule_index, state_index in enumerate(current_translation_indices):
+                    match_list.append(new_comp_list[state_index] == rule_comp_list[rule_index])
+                    if not rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                        match_list.append(new_conf_list[state_index] == rule_conf_list[rule_index])
+                
+                # If they all match, make the converstion and add to the converstion tuple list
+                if all(match_list):
+                    converted_rule_comp_list, converted_rule_conf_list = rule.generate_component_list('object')
+                    for rule_index, state_index in enumerate(current_translation_indices):
+                        new_comp_list[state_index] = converted_rule_comp_list[rule_index]
+                        if not converted_rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                            new_conf_list[state_index] = converted_rule_conf_list[rule_index]
+                    
+                    # Add to the working converstion tuples, links not changed yet (but might be if we implement non-1:1 conversions)
+                    valid_conversion_tuples.append((subject_state, new_comp_list, new_conf_list, subject_state.internal_links))
+                
+        # Give back the list of stuff that should be working
+        return valid_conversion_tuples
+    
+    # Graphing utility function
+    def _main_graph_dump(self, label='default'):
+        plt.cla()
+        G = self.network.main_graph
+        nx.draw(G, with_labels=True, font_weight='bold')
+        plt.savefig(label+'.png')
+        
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):
     new_number = _find_next_model_number(model_list)
@@ -947,6 +1036,3 @@ def _find_next_model_number(model_list):
        current_int += 1
     return current_int
 
-
-        
-    

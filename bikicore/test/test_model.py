@@ -16,6 +16,14 @@ def default_Drug_instance():
     ddi.name = 'adrenaline'
     ddi.symbol = 'A'
     return ddi
+
+# Create a second Drug object for reuse in tests
+@pytest.fixture()
+def second_Drug_instance():
+    ddi = bkcc.Drug()
+    ddi.name = 'alprenolol'
+    ddi.symbol = 'B'
+    return ddi
     
 # Create a default Protein object for reuse in tests
 @pytest.fixture()
@@ -32,6 +40,15 @@ def default_Protein_instance():
 def default_Model_instance(default_Drug_instance, default_Protein_instance):
     newmodel = bkcm.Model(1, 'Default Null Model', None)
     newmodel.drug_list.append(default_Drug_instance)
+    newmodel.protein_list.append(default_Protein_instance)
+    return newmodel
+
+# Create a secondary Model object with empty graph from bkcm for reuse in tests
+@pytest.fixture()
+def second_Model_instance(default_Drug_instance, second_Drug_instance, default_Protein_instance):
+    newmodel = bkcm.Model(1, 'Second Null Model', None)
+    newmodel.drug_list.append(default_Drug_instance)
+    newmodel.drug_list.append(second_Drug_instance)
     newmodel.protein_list.append(default_Protein_instance)
     return newmodel
 
@@ -95,7 +112,6 @@ def default_Model_conversion(default_Model_instance):
     dmi.rule_list = [r1]
     return dmi
 
-# Setup for conversion tests
 @pytest.fixture()
 def default_Model_two_rule_antagonist(default_Model_instance):
     dmi = default_Model_instance
@@ -121,6 +137,85 @@ def default_Model_two_rule_antagonist(default_Model_instance):
     # Add to model
     dmi.rule_list = [r0, r1]
     return dmi
+
+@pytest.fixture()
+def default_Model_three_rule_antagonists(second_Model_instance):
+    smi = second_Model_instance
+    
+    #Setup rule for an antagonist association - "A associates reversibly with R([])"
+    r0 = bkcc.Rule(smi)
+    r0.rule_subject = [smi.drug_list[0]]
+    r0.subject_conf = [None]
+    r0.rule = ' reversibly associates with '
+    r0.rule_object = [smi.protein_list[0]]
+    r0.object_conf = [[]]
+    r0.check_rule_traits()
+
+    #Setup testing rule for a state conversion - "R(0) reversibly converts to R(1)"
+    r1 = bkcc.Rule(smi)
+    r1.rule_subject = [smi.protein_list[0]]
+    r1.subject_conf = [[0]]
+    r1.rule = ' reversibly converts to '
+    r1.rule_object = [smi.protein_list[0]]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    
+    #Setup rule for an antagonist association - "B associates reversibly with R([])"
+    r2 = bkcc.Rule(smi)
+    r2.rule_subject = [smi.drug_list[1]]
+    r2.subject_conf = [None]
+    r2.rule = ' reversibly associates with '
+    r2.rule_object = [smi.protein_list[0]]
+    r2.object_conf = [[]]
+    r2.check_rule_traits()
+    
+    # Add to model
+    smi.rule_list = [r0, r1, r2]
+    return smi
+
+@pytest.fixture()
+def default_Model_four_rule_competitive_antagonists(second_Model_instance):
+    smi = second_Model_instance
+    
+    #Setup rule for an antagonist association - "A associates reversibly with R([])"
+    r0 = bkcc.Rule(smi)
+    r0.rule_subject = [smi.drug_list[0]]
+    r0.subject_conf = [None]
+    r0.rule = ' reversibly associates with '
+    r0.rule_object = [smi.protein_list[0]]
+    r0.object_conf = [[]]
+    r0.check_rule_traits()
+
+    #Setup testing rule for a state conversion - "R(0) reversibly converts to R(1)"
+    r1 = bkcc.Rule(smi)
+    r1.rule_subject = [smi.protein_list[0]]
+    r1.subject_conf = [[0]]
+    r1.rule = ' reversibly converts to '
+    r1.rule_object = [smi.protein_list[0]]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    
+    #Setup rule for an antagonist association - "B associates reversibly with R([])"
+    r2 = bkcc.Rule(smi)
+    r2.rule_subject = [smi.drug_list[1]]
+    r2.subject_conf = [None]
+    r2.rule = ' reversibly associates with '
+    r2.rule_object = [smi.protein_list[0]]
+    r2.object_conf = [[]]
+    r2.check_rule_traits()
+    
+    #Setup testing rule for a competition - "A is competitive with B"
+    r3 = bkcc.Rule(smi)
+    r3.rule_subject = [smi.drug_list[0]]
+    r3.subject_conf = [None]
+    r3.rule = ' is competitive with '
+    r3.rule_object = [smi.drug_list[1]]
+    r3.object_conf = [None]
+    r3.check_rule_traits()
+    
+    # Add to model
+    smi.rule_list = [r0, r1, r2, r3]
+    return smi
 
 # ---- Unit tests ----
 
@@ -166,7 +261,7 @@ def test_Model_generate_network_null(default_Model_instance):
     assert nx.algorithms.isomorphism.is_isomorphic(dmi.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_irr_association(model_for_matching_tests):
+def test_Model_apply_rules_irr_association(model_for_matching_tests):
     mmt = model_for_matching_tests
     
     # Has rule for simple drug association - "A associates with R"
@@ -196,7 +291,7 @@ def test_Model_generate_network_irr_association(model_for_matching_tests):
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
     
 # Test that the 'associates with' rule creates a valid shaped graph without unwanted dimerization
-def test_Model_generate_network_irr_association_dimers(model_for_matching_tests):
+def test_Model_apply_rules_irr_association_dimers(model_for_matching_tests):
     mmt = model_for_matching_tests
         
     # Setup test network
@@ -232,7 +327,7 @@ def test_Model_generate_network_irr_association_dimers(model_for_matching_tests)
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
     
 # Test that the 'dissociates from' rule creates a valid shaped graph 
-def test_Model_generate_network_irr_disassociation(model_for_dissociation_matching):
+def test_Model_apply_rules_irr_disassociation(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
     # Have rule for simple drug disassociation - "A disassociates from AR([])"
@@ -257,7 +352,7 @@ def test_Model_generate_network_irr_disassociation(model_for_dissociation_matchi
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
 
 # Test that the 'reversibly dissociates from' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_disassociation(model_for_dissociation_matching):
+def test_Model_apply_rules_rev_disassociation(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
     # Have rule for simple drug disassociation - "A disassociates from AR([])", edit to be reversible
@@ -283,7 +378,7 @@ def test_Model_generate_network_rev_disassociation(model_for_dissociation_matchi
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
     
 # Test that the 'reversibly associates with' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_association(model_for_matching_tests):
+def test_Model_apply_rules_rev_association(model_for_matching_tests):
     mmt = model_for_matching_tests
     
     # Has rule for simple drug association, modify to reversible association - "A reversibly associates with R"
@@ -314,7 +409,7 @@ def test_Model_generate_network_rev_association(model_for_matching_tests):
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
 
 # Test that the ' associates and dissociates in rapid equlibrium with ' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_RE_association(model_for_matching_tests):
+def test_Model_apply_rules_rev_RE_association(model_for_matching_tests):
     mmt = model_for_matching_tests
     
     # Has rule for simple drug association, modify to reversible association - "A reversibly associates with R"
@@ -345,7 +440,7 @@ def test_Model_generate_network_rev_RE_association(model_for_matching_tests):
     assert nx.algorithms.isomorphism.is_isomorphic(mmt.network.main_graph, testgraph)
 
 # Test that the ' dissociates and reassociates in rapid equlibrium with ' rule creates a valid shaped graph 
-def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_matching):
+def test_Model_apply_rules_rev_RE_disassociation(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
     # Have rule for simple drug disassociation - "A disassociates from AR([])", edit to be reversible in rapid equlibrium
@@ -370,6 +465,57 @@ def test_Model_generate_network_rev_RE_disassociation(model_for_dissociation_mat
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(mdm.network.main_graph, testgraph)
 
+# Test that the ' is competitive with ' rule creates a valid shaped graph 
+def test_Model_apply_rules_competition(second_Model_instance, default_Drug_instance, second_Drug_instance, default_Protein_instance):
+    smi = second_Model_instance
+    ddi = default_Drug_instance 
+    sdi = second_Drug_instance
+    dpi = default_Protein_instance# For typing convenience
+    
+    #Setup testing rule for a competition - "A is competitive with B"
+    r0 = bkcc.Rule(smi)
+    r0.rule_subject = [smi.drug_list[0]]
+    r0.subject_conf = [None]
+    r0.rule = ' is competitive with '
+    r0.rule_object = [smi.drug_list[1]]
+    r0.object_conf = [None]
+    r0.check_rule_traits()
+
+    # Create a new Network object without calling dmi.generate_network()
+    smi.network = bkcc.Network()
+        
+    # Setup test network
+    s1 = bkcc.State() # Allowed
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[0]]
+    s1.internal_links = [(0, 1)]
+    smi.network.main_graph.add_node(s1)
+    
+    s2 = bkcc.State() # Allowed
+    s2.required_drug_list = [sdi]
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0]]
+    s2.internal_links = [(0, 1)]
+    smi.network.main_graph.add_node(s2)
+
+    s3 = bkcc.State() # Should be deleted
+    s3.required_drug_list = [ddi, sdi]
+    s3.required_protein_list = [dpi]
+    s3.req_protein_conf_lists = [[0]]
+    s3.internal_links = [(0, 2), (1, 2)]
+    smi.network.main_graph.add_node(s3)
+    
+    # Apply the existing rule - "A is competitive with B"
+    smi.apply_rules_to_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2]) # State 3 should be deleted
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(smi.network.main_graph, testgraph)
+
 # Test that generate_network can process multiple rules
 def test_Model_generate_network_two_rules(default_Model_two_rule_antagonist):
     m2r = default_Model_two_rule_antagonist
@@ -378,10 +524,44 @@ def test_Model_generate_network_two_rules(default_Model_two_rule_antagonist):
     # Create comparision graph shape
     testgraph = nx.DiGraph()
     testgraph.add_nodes_from([1, 2, 3, 4, 5]) #1=A, 2=R, 3=R*, 4=AR, 5=AR*
-    testgraph.add_edges_from([(1, 4), (2, 4), (1, 5), (3, 5), (2, 3), (4, 5)])
+    testgraph.add_edges_from([(1, 4), (4, 1), (2, 4), (4, 2), (1, 5), (5, 1), (3, 5), (5, 3), (2, 3), (3, 2), (4, 5), (5, 4)])
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(m2r.network.main_graph, testgraph)
+
+# Test that generate_network can process multiple rules
+def test_Model_generate_network_three_rules(default_Model_three_rule_antagonists):
+    m3r = default_Model_three_rule_antagonists
+    m3r.generate_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) #1=A, 2=B, 3=R, 4=R*, 5=AR, 6=AR*, 7=BR, 8=BR*, 9=ABR, 10=ABR*
+    testgraph.add_edges_from([(1, 5), (5, 1), (3, 5), (5, 3), (2, 7), (7, 2), (3, 7), (7, 3),\
+                              (1, 6), (6, 1), (4, 6), (6, 4), (2, 8), (8, 2), (4, 8), (8, 4),\
+                              (1, 9), (9, 1), (7, 9), (9, 7), (2, 9), (9, 2), (5, 9), (9, 5),\
+                              (1, 10), (10, 1), (8, 10), (10, 8), (2, 10), (10, 2), (6, 10), (10, 6),\
+                              (3, 4), (4, 3), (5, 6), (6, 5), (7, 8), (8, 7), (9, 10), (10, 9)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(m3r.network.main_graph, testgraph)
+
+# Test that generate_network can process multiple rules
+def test_Model_generate_network_four_rules_competitive(default_Model_four_rule_competitive_antagonists):
+    m4r = default_Model_four_rule_competitive_antagonists
+    m4r.generate_network()
+
+    # Create comparision graph shape
+    testgraph = nx.DiGraph()
+    testgraph.add_nodes_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) #1=A, 2=B, 3=R, 4=R*, 5=AR, 6=AR*, 7=BR, 8=BR*, 9=ABR, 10=ABR*
+    testgraph.add_edges_from([(1, 5), (5, 1), (3, 5), (5, 3), (2, 7), (7, 2), (3, 7), (7, 3),\
+                              (1, 6), (6, 1), (4, 6), (6, 4), (2, 8), (8, 2), (4, 8), (8, 4),\
+                              (1, 9), (9, 1), (7, 9), (9, 7), (2, 9), (9, 2), (5, 9), (9, 5),\
+                              (1, 10), (10, 1), (8, 10), (10, 8), (2, 10), (10, 2), (6, 10), (10, 6),\
+                              (3, 4), (4, 3), (5, 6), (6, 5), (7, 8), (8, 7), (9, 10), (10, 9)])
+    
+    # Compare shape of graph
+    assert nx.algorithms.isomorphism.is_isomorphic(m4r.network.main_graph, testgraph)
 
 # Test that the ' converts to ' rule creates a valid shaped graph 
 def test_Model_conversion(default_Model_conversion):
