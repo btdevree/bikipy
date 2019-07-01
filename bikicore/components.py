@@ -415,10 +415,38 @@ class Rule(HasTraits):
                     if new_sig.subject_count - new_sig.object_count != Counter() or new_sig.object_count - new_sig.subject_count != Counter(): # Could have dissapearing states, check subtraction in both directions
                         signature_list.append(new_sig)
         
-         
         # Competition rule
         elif self.rule == ' is competitive with ':   
-            pass
+            
+            # If we have all None or [] conformations, this is pretty simple and we return a component only signature
+            if all([x == None or x == [] for x in self.subject_conf]) and all([x == None or x == [] for x in self.object_conf]):
+                new_sig = CountingSignature('components only')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                signature_list.append(new_sig)
+            
+            # If we have to worry about about conformations, but there is no "any" conformations ([]), this is also pretty simple
+            elif all([x != [] for x in self.subject_conf]) and all([x != [] for x in self.object_conf]):
+                new_sig = CountingSignature('conformations included')
+                new_sig.count_for_subject(*self.generate_component_list('subject'))
+                new_sig.count_for_object(*self.generate_component_list('object'))
+                signature_list.append(new_sig)
+           
+            # We must have at least one "any" conformation but not all, so we make a list of all possible conformations that could fit the rule
+            else:
+                # Save the lists of components/conformations
+                sub_comp, sub_conf = self.generate_component_list('subject')
+                obj_comp, obj_conf = self.generate_component_list('object')
+                
+                # Get all the possible conformation combinations that can be made
+                new_sub_conf_list, new_obj_conf_list = self._get_all_conformation_combinations(sub_conf, obj_conf, sub_comp, obj_comp)
+                
+                # Now create signatures from the lists                   
+                for new_sub_conf, new_obj_conf in zip(new_sub_conf_list, new_obj_conf_list):
+                    new_sig = CountingSignature('conformations included')
+                    new_sig.count_for_subject(sub_comp, new_sub_conf)
+                    new_sig.count_for_object(obj_comp, new_obj_conf)
+                    signature_list.append(new_sig)
         
         else:
             raise ValueError("Rule type not recognized")

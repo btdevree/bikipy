@@ -143,8 +143,7 @@ class Model(HasTraits):
             elif current_rule.rule == ' converts to ' or current_rule.rule == ' reversibly converts to ' \
                     or current_rule.rule == ' converts in rapid equlibrium to ':
                 
-                # Get a list of acceptable signatures for the rule and read which type of signature we need
-                # Add converstion signatures
+                # Get a list of acceptable signatures for the rule converstion rules
                 reference_signatures = current_rule.generate_signature_list()
                 
                 # Find states that fit the rule description
@@ -168,11 +167,18 @@ class Model(HasTraits):
             # Competition rule
             elif current_rule.rule == ' is competitive with ':   
                 
+                # Find matching signatures
+                reference_signatures = current_rule.generate_signature_list()
+                
                 # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'both')
+                
+               Move matching out to a tuple generating function !!!!# Find all possible conversion reactions with the matching states, returns the components involved and what they change to, but not the internal structure
+                possible_conversion_tuples = self._find_conversion_pairs(current_rule, reference_signatures, matching_subject_states)
+
                
                 # Validate links for matching states
-                states_to_remove = self._find_competition_internal_link(current_rule, matching_subject_states)
+                states_to_remove = self._find_competition_internal_link(current_rule, matching_subject_states, reference_signatures)
                 
                 # Make the conversion
                 for current_state in states_to_remove:
@@ -952,55 +958,54 @@ class Model(HasTraits):
         # Give back the list of stuff that should be working
         return valid_conversion_tuples
     
-    def _find_competition_internal_link(self, rule, matching_subject_states):
+    def _find_competition_internal_link(self, rule, matching_subject_states, reference_signatures):
     # Function to check if the internal link structure of indicated competitive states is valid.
 
         # Work through each tuple of possible solutions and figure out if the internal links could match.
         valid_competitive_states = []
         for current_state in matching_subject_states:
             
-            # Which components are referenced by the rule
-            rule_comp_sub, rule_conf_sub = rule.generate_component_list('subject')
-            rule_comp_obj, rule_conf_obj = rule.generate_component_list('object')
+            # See if the state could match any of the reference signatures
             
-            # Test all combinations of subject and object states
-            = 
-            
-            # The competitive comonents must all be linked directly to the same thing
-            # Split the state to get the converted components by themselves
-            broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
-            
-            # See if the conversion links have at least one mention of each component
-            if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
-                if not all([x in self._collect_link_values(conversion_links) for x in conversion_indices]):
-                    continue # Failed, short-circult test to try next tuple of possible conversions
-            
-            # Test all possible permutations of the index order, we don't know which one is right yet
-            index_translations = itertools.permutations(conversion_indices)
-            for current_translation_indices in index_translations:
-                 
-                # Get lists of components/conformations to compare
-                new_comp_list, new_conf_list = subject_state.generate_component_list()
-                rule_comp_list, rule_conf_list = rule.generate_component_list('subject')
+            for current_signature in reference_signatures:
                 
-                # See if all the ordered components in the rule match with those from the state
-                match_list = []
-                for rule_index, state_index in enumerate(current_translation_indices):
-                    match_list.append(new_comp_list[state_index] == rule_comp_list[rule_index])
-                    if not rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
-                        match_list.append(new_conf_list[state_index] == rule_conf_list[rule_index])
+                # It's possible that more than one position matches in each state
+                sub_match_indices = 
+                # The competitive components must all be linked directly to the same thing
+                # Split the state to get the converted components by themselves
+                broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
                 
-                # If they all match, make the converstion and add to the converstion tuple list
-                if all(match_list):
-                    converted_rule_comp_list, converted_rule_conf_list = rule.generate_component_list('object')
-                    for rule_index, state_index in enumerate(current_translation_indices):
-                        new_comp_list[state_index] = converted_rule_comp_list[rule_index]
-                        if not converted_rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
-                            new_conf_list[state_index] = converted_rule_conf_list[rule_index]
+                # See if the conversion links have at least one mention of each component
+                if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
+                    if not all([x in self._collect_link_values(conversion_links) for x in conversion_indices]):
+                        continue # Failed, short-circult test to try next tuple of possible conversions
+                
+                # Test all possible permutations of the index order, we don't know which one is right yet
+                index_translations = itertools.permutations(conversion_indices)
+                for current_translation_indices in index_translations:
+                     
+                    # Get lists of components/conformations to compare
+                    new_comp_list, new_conf_list = subject_state.generate_component_list()
+                    rule_comp_list, rule_conf_list = rule.generate_component_list('subject')
                     
-                    # Add to the working converstion tuples, links not changed yet (but might be if we implement non-1:1 conversions)
-                    valid_conversion_tuples.append((subject_state, new_comp_list, new_conf_list, subject_state.internal_links))
-                
+                    # See if all the ordered components in the rule match with those from the state
+                    match_list = []
+                    for rule_index, state_index in enumerate(current_translation_indices):
+                        match_list.append(new_comp_list[state_index] == rule_comp_list[rule_index])
+                        if not rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                            match_list.append(new_conf_list[state_index] == rule_conf_list[rule_index])
+                    
+                    # If they all match, make the converstion and add to the converstion tuple list
+                    if all(match_list):
+                        converted_rule_comp_list, converted_rule_conf_list = rule.generate_component_list('object')
+                        for rule_index, state_index in enumerate(current_translation_indices):
+                            new_comp_list[state_index] = converted_rule_comp_list[rule_index]
+                            if not converted_rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
+                                new_conf_list[state_index] = converted_rule_conf_list[rule_index]
+                        
+                        # Add to the working converstion tuples, links not changed yet (but might be if we implement non-1:1 conversions)
+                        valid_conversion_tuples.append((subject_state, new_comp_list, new_conf_list, subject_state.internal_links))
+                    
         # Give back the list of stuff that should be working
         return valid_conversion_tuples
     
