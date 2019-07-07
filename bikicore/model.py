@@ -171,12 +171,11 @@ class Model(HasTraits):
                 reference_signatures = current_rule.generate_signature_list()
                 
                 # Find states that fit the rule description
-                matching_subject_states = self._find_states_that_match_rule(current_rule, 'both')
+                matching_states = self._find_states_that_match_rule(current_rule, 'both')
                 
-               Move matching out to a tuple generating function !!!!# Find all possible conversion reactions with the matching states, returns the components involved and what they change to, but not the internal structure
-                possible_conversion_tuples = self._find_conversion_pairs(current_rule, reference_signatures, matching_subject_states)
+                # Find all possible indieces for competing components in the matching states
+                possible_competing_tuples = self._find_competitive_states(current_rule, reference_signatures, matching_states)
 
-               
                 # Validate links for matching states
                 states_to_remove = self._find_competition_internal_link(current_rule, matching_subject_states, reference_signatures)
                 
@@ -471,6 +470,60 @@ class Model(HasTraits):
         query_rev_diff = query_signature.object_count - query_signature.subject_count
         
         if ref_fwd_diff == query_fwd_diff and ref_rev_diff == query_rev_diff:
+            return True
+        else:
+            return False
+    
+    def _find_competitive_states(rule, reference_signatures, matching_states):
+    # Find all the possible indices for identifying the competing parts of each matched state
+        
+        # Get requried information for matching
+        count_type = reference_signatures[0].count_type
+        number_sub_indices_needed = len(rule.rule_subject)
+        number_obj_indices_needed = len(rule.rule_object)
+    
+        # Work through each state and signature and test all index combinations to see if they match
+        possible_competition_tuples = []
+        for current_state in matching_states:
+            
+            # Get the indices and list of components
+#            if count_type == 'components only':
+#                state_index_list, state_component_list = zip(current_state.enumerate_components)
+#            elif count_type == 'conformations included':
+            state_index_list, state_component_list, state_conformation_list = zip(current_state.enumerate_components, return_conformations = True)
+            
+            # Get all possible sets of indices and test all of them
+            sub_indices = itertools.combinations(state_index_list, number_sub_indices_needed)
+            obj_indices = itertools.combinations(state_index_list, number_obj_indices_needed)
+            index_pairs = itertools.product(sub_indices, obj_indices)
+            for current_index_pair in index_pairs:
+                current_sub_indices, current_obj_indices = current_index_pair 
+                
+                # If there is any repeat of index values, the pairing is invalid and we should go to the next pair
+                if any([x in current_obj_indices for x in current_sub_indices]):
+                    continue # Test next index pair
+                
+                # Otherwise, make a signature from the indices
+                test_signature = bkcc.CountingSignature(count_type) 
+                test_signature.count_for_subject([state_component_list[i] for i in current_sub_indices], [state_conformation_list[i] for i in current_sub_indices])
+                test_signature.count_for_object([state_component_list[i] for i in current_obj_indices], [state_conformation_list[i] for i in current_obj_indices]) # Add the converted components to the signature
+                        
+                # See if this matches any of the reference signatures, and if so, add to tuple list
+                if any([self._signature_match_competition(test_signature, x) for x in reference_signatures]):
+                    possible_competition_tuples.append((current_state, current_sub_indices, current_obj_indices))
+                    continue # Test next index pair
+                 
+        # Return any state-index tuples that might work for link testing
+        return possible_competition_tuples 
+    
+    def _signature_match_competition(self, query_signature, reference_signature):
+        # Helper function that asks if a given query signature matches the reference signature in a competition context
+        # Returns True or False
+        
+        # NOTE: TO DO - I think this should incorperated as a custom equality function as the signature class
+        
+        # Very simple, ask if the two counters are equal
+        if query_signature.subject_count == reference_signature.subject_count and query_signature.object_count == reference_signature.object_count:
             return True
         else:
             return False
@@ -961,11 +1014,6 @@ class Model(HasTraits):
     def _find_competition_internal_link(self, rule, matching_subject_states, reference_signatures):
     # Function to check if the internal link structure of indicated competitive states is valid.
 
-        # Work through each tuple of possible solutions and figure out if the internal links could match.
-        valid_competitive_states = []
-        for current_state in matching_subject_states:
-            
-            # See if the state could match any of the reference signatures
             
             for current_signature in reference_signatures:
                 
@@ -1008,6 +1056,8 @@ class Model(HasTraits):
                     
         # Give back the list of stuff that should be working
         return valid_conversion_tuples
+   
+
     
     # Graphing utility function
     def _main_graph_dump(self, label='default'):

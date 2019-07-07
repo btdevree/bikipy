@@ -217,6 +217,23 @@ def default_Model_four_rule_competitive_antagonists(second_Model_instance):
     smi.rule_list = [r0, r1, r2, r3]
     return smi
 
+@pytest.fixture()
+def default_Model_competition(second_Model_instance):
+    smi = second_Model_instance
+    
+    #Setup testing rule for a competition - "A is competitive with B"
+    r0 = bkcc.Rule(smi)
+    r0.rule_subject = [smi.drug_list[0]]
+    r0.subject_conf = [None]
+    r0.rule = ' is competitive with '
+    r0.rule_object = [smi.drug_list[1]]
+    r0.object_conf = [None]
+    r0.check_rule_traits()
+    
+    # Add to model
+    smi.rule_list = [r0]
+    return smi
+
 # ---- Unit tests ----
 
 # --Tests for Model objects--
@@ -1430,4 +1447,58 @@ def test_find_conversion_pairs(default_Model_conversion, default_Protein_instanc
     assert test_results[0][1] == (0,)
     assert test_results[0][2] == [dpi]
     assert test_results[0][3] == [[1]]
-       
+     
+# Test that we return states with possible competitive states and the possible indices that match the rule
+def test_find_competitive_states(default_Model_competition, default_Drug_instance, second_Drug_instance, default_Protein_instance):
+    dmc = second_Model_instance
+    ddi = default_Drug_instance 
+    sdi = second_Drug_instance
+    dpi = default_Protein_instance# For typing convenience
+    r1 = dmc.rule_list[0]
+    
+    # We have rule A is competitive with B
+    ref_sig = r1.generate_signature_list()
+    
+    # Make some states
+    s1 = bkcc.State() # OK, only one ligand
+    s1.required_drug_list = [ddi]
+    s1.required_protein_list = [dpi]
+    s1.req_protein_conf_lists = [[0]]
+    s1.internal_links = [(0, 1)]
+    
+    s2 = bkcc.State()  # Not allowed, two ligands bound to one receptor
+    s2.required_drug_list = [ddi, sdi]
+    s2.required_protein_list = [dpi]
+    s2.req_protein_conf_lists = [[0]]
+    s2.internal_links = [(0, 2), (1, 2)]
+    
+    s3 = bkcc.State()  # OK, two ligands bound to different receptors
+    s3.required_drug_list = [ddi, sdi]
+    s3.required_protein_list = [dpi, dpi]
+    s3.req_protein_conf_lists = [[0], [0]]
+    s3.internal_links = [(0, 2), (1, 3)]
+    
+    s4 = bkcc.State()  # Not allowed, three ligands, two recpetors, with both drugs bound to same receptor
+    s4.required_drug_list = [ddi, ddi, sdi]
+    s4.required_protein_list = [dpi, dpi]
+    s4.req_protein_conf_lists = [[0], [0]]
+    s4.internal_links = [(0, 3), (1, 4), (2, 3)]
+      
+    # Test states
+    test_obj_list = [s1, s2, s3, s4]
+    test_results = dmc._find_competitive_states(r1, ref_sig, test_obj_list)
+    
+    # Check if we got the expected results, tuple= (state, (indices of subject), (indices of object))
+    assert len(test_results) == 4
+    assert test_results[0][0] == s2
+    assert test_results[0][1] == (0,)
+    assert test_results[0][2] == (1,)
+    assert test_results[1][0] == s3 # Will be allowed by link-checking
+    assert test_results[1][1] == (0,)
+    assert test_results[1][2] == (1,)
+    assert test_results[2][0] == s4 
+    assert test_results[2][1] == (0,)
+    assert test_results[2][2] == (2,)
+    assert test_results[3][0] == s4 # Will be allowed by link-checking, but overall state disqualified by previous configuration
+    assert test_results[3][1] == (1,)
+    assert test_results[3][2] == (2,)
