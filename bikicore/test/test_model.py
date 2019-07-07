@@ -1450,7 +1450,7 @@ def test_find_conversion_pairs(default_Model_conversion, default_Protein_instanc
      
 # Test that we return states with possible competitive states and the possible indices that match the rule
 def test_find_competitive_states(default_Model_competition, default_Drug_instance, second_Drug_instance, default_Protein_instance):
-    dmc = second_Model_instance
+    dmc = default_Model_competition
     ddi = default_Drug_instance 
     sdi = second_Drug_instance
     dpi = default_Protein_instance# For typing convenience
@@ -1485,8 +1485,8 @@ def test_find_competitive_states(default_Model_competition, default_Drug_instanc
     s4.internal_links = [(0, 3), (1, 4), (2, 3)]
       
     # Test states
-    test_obj_list = [s1, s2, s3, s4]
-    test_results = dmc._find_competitive_states(r1, ref_sig, test_obj_list)
+    test_state_list = [s1, s2, s3, s4]
+    test_results = dmc._find_competitive_states(r1, ref_sig, test_state_list)
     
     # Check if we got the expected results, tuple= (state, (indices of subject), (indices of object))
     assert len(test_results) == 4

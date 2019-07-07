@@ -177,7 +177,7 @@ class Model(HasTraits):
                 possible_competing_tuples = self._find_competitive_states(current_rule, reference_signatures, matching_states)
 
                 # Validate links for matching states
-                states_to_remove = self._find_competition_internal_link(current_rule, matching_subject_states, reference_signatures)
+                states_to_remove = self._find_competition_internal_link(current_rule, possible_competing_tuples)
                 
                 # Make the conversion
                 for current_state in states_to_remove:
@@ -474,7 +474,7 @@ class Model(HasTraits):
         else:
             return False
     
-    def _find_competitive_states(rule, reference_signatures, matching_states):
+    def _find_competitive_states(self, rule, reference_signatures, matching_states):
     # Find all the possible indices for identifying the competing parts of each matched state
         
         # Get requried information for matching
@@ -490,7 +490,8 @@ class Model(HasTraits):
 #            if count_type == 'components only':
 #                state_index_list, state_component_list = zip(current_state.enumerate_components)
 #            elif count_type == 'conformations included':
-            state_index_list, state_component_list, state_conformation_list = zip(current_state.enumerate_components, return_conformations = True)
+            
+            state_index_list, state_component_list, state_conformation_list = zip(*current_state.enumerate_components(True))
             
             # Get all possible sets of indices and test all of them
             sub_indices = itertools.combinations(state_index_list, number_sub_indices_needed)
@@ -1011,53 +1012,38 @@ class Model(HasTraits):
         # Give back the list of stuff that should be working
         return valid_conversion_tuples
     
-    def _find_competition_internal_link(self, rule, matching_subject_states, reference_signatures):
-    # Function to check if the internal link structure of indicated competitive states is valid.
+    def _find_competition_internal_link(self, rule, possible_competing_tuples):
+    # Function to check if the internal link structure of indicated competitive states implies competition.
+    
+        # Work through each tuple of possible solutions and figure out if the internal links point to the same binding site
+        valid_competing_states = []
+        for current_possible_tuple in possible_competing_tuples:
+            current_state, subject_indices, object_indices = current_possible_tuple
+             
+            # If we already ID'd this state as being invalid, continue to next tuple
+            if current_state in valid_competing_states:
+                continue
+             
+            # Need to convert 1-tuples to simple values
+            if len(subject_indices) == 1:
+                subject_indices = subject_indices[0]
+            if len(object_indices) == 1:
+                object_indices = object_indices[0]
 
-            
-            for current_signature in reference_signatures:
-                
-                # It's possible that more than one position matches in each state
-                sub_match_indices = 
-                # The competitive components must all be linked directly to the same thing
-                # Split the state to get the converted components by themselves
-                broken_links, conversion_links, nonconvert_links = self._split_internal_link_list(subject_state, conversion_indices)
-                
-                # See if the conversion links have at least one mention of each component
-                if len(conversion_indices) > 1: # Single component conversions don't need to pass this test
-                    if not all([x in self._collect_link_values(conversion_links) for x in conversion_indices]):
-                        continue # Failed, short-circult test to try next tuple of possible conversions
-                
-                # Test all possible permutations of the index order, we don't know which one is right yet
-                index_translations = itertools.permutations(conversion_indices)
-                for current_translation_indices in index_translations:
-                     
-                    # Get lists of components/conformations to compare
-                    new_comp_list, new_conf_list = subject_state.generate_component_list()
-                    rule_comp_list, rule_conf_list = rule.generate_component_list('subject')
-                    
-                    # See if all the ordered components in the rule match with those from the state
-                    match_list = []
-                    for rule_index, state_index in enumerate(current_translation_indices):
-                        match_list.append(new_comp_list[state_index] == rule_comp_list[rule_index])
-                        if not rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
-                            match_list.append(new_conf_list[state_index] == rule_conf_list[rule_index])
-                    
-                    # If they all match, make the converstion and add to the converstion tuple list
-                    if all(match_list):
-                        converted_rule_comp_list, converted_rule_conf_list = rule.generate_component_list('object')
-                        for rule_index, state_index in enumerate(current_translation_indices):
-                            new_comp_list[state_index] = converted_rule_comp_list[rule_index]
-                            if not converted_rule_conf_list[rule_index] == []: # Just ignore the state's conformation if there is an "any" conformation in the rule
-                                new_conf_list[state_index] = converted_rule_conf_list[rule_index]
-                        
-                        # Add to the working converstion tuples, links not changed yet (but might be if we implement non-1:1 conversions)
-                        valid_conversion_tuples.append((subject_state, new_comp_list, new_conf_list, subject_state.internal_links))
-                    
-        # Give back the list of stuff that should be working
-        return valid_conversion_tuples
-   
-
+            # Get list of positions that the subject and object is connected to
+            subject_connections_fwd = [y for x, y in current_state.internal_links if x == subject_indices]
+            subject_connections_rev = [x for x, y in current_state.internal_links if y == subject_indices]
+            subject_connections = set(subject_connections_fwd + subject_connections_rev)
+            object_connections_fwd = [y for x, y in current_state.internal_links if x == object_indices]
+            object_connections_rev = [x for x, y in current_state.internal_links if y == object_indices]
+            object_connections = set(object_connections_fwd + object_connections_rev)
+             
+            # The two peices are in competition if they share any connections
+            if len(subject_connections & object_connections) > 0:
+                valid_competing_states.append(current_state)
+        
+        # Give back the list of states that should be removed
+        return valid_competing_states
     
     # Graphing utility function
     def _main_graph_dump(self, label='default'):
