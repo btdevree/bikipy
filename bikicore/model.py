@@ -82,6 +82,7 @@ class Model(HasTraits):
         # If default, work on the main graph
         if graph == None:
             graph = self.network.main_graph
+            graph_blacklist = self.network.main_graph_blacklist
         
         # Apply each rule to the graph
         for current_rule in self.rule_list:
@@ -181,7 +182,7 @@ class Model(HasTraits):
                 
                 # Make the conversion
                 for current_state in states_to_remove:
-                    self._remove_state(graph, states_to_remove)
+                    self._remove_states(graph, graph_blacklist, states_to_remove)
             
             else:
                 raise ValueError("Rule not recognized")
@@ -252,7 +253,19 @@ class Model(HasTraits):
                 return False
         else: # No other match modes supported, raise error
             raise ValueError('Function _state_match_to_component_lists received an incorrect argument for parameter "match"')
+    
+    def _state_match_to_state(self, query_state, reference_state, match = 'exact'):
+        # Helper function that asks if a given query state maches a reference state (compares components and links)
+        # Returns True or False
+        # Use modes:
+        #   match = 'exact': returns true if and only if the query state contains all the reference components, and no extra components
+        #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well   
         
+        # We can just wrap the _state_match_to_component_lists function
+        reference_component_list, reference_conformation_list = reference_state.generate_component_list()
+        reference_link_list = reference_state.internal_links
+        return(self._state_match_to_component_lists(query_state, reference_component_list, reference_conformation_list, reference_link_list, match))
+    
     def _compare_component_lists(self, query_component_list, query_conformation_list, reference_component_list, reference_conformation_list, match = 'exact'):
         # Function to compare two sets of component and conformation lists, with no regard to order and without replacement    
         
@@ -630,8 +643,31 @@ class Model(HasTraits):
         # Add edges to convert states (NetworkX will add any states that don't alreay exist in the graph)
         graph.add_edge(subject_state, object_state)
         if reversible:
-             graph.add_edge(object_state, subject_state)          
+             graph.add_edge(object_state, subject_state)    
+              
+    def _remove_states(self, graph, graph_blacklist, state_list):
+        # Function to remove the listed states from the indicated graph
+        # Add to graph's state blacklist
 
+        # NOTE: Did not choose to match by object address so the function is more general (i.e., remove states that didn't origonate from the indicated graph)        
+        
+        # Repeat for each state
+        for competing_state in state_list:
+            
+            # Find the state in the graph
+            for current_state in graph.__iter__():
+                if self._state_match_to_state(current_state, competing_state, match = 'exact'):
+                
+                    # Remove the state from the graph (all connecting edges are removed as well)
+                    graph.remove_node(current_state)
+                    
+                    # Add state to blacklist
+                    if not any(self._state_match_to_state(current_state, x, match = 'exact') for x in graph_blacklist):
+                        graph_blacklist.append(current_state)
+
+                    # Find next state
+                    break
+                
     def _translate_link_tuple(self, link_tuple, translate_dict):
         # Generator expression to translate complex tuple trees - only run when consumed by tuple later on
         if isinstance(link_tuple, int): # Need to handle a single integer element as well

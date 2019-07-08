@@ -510,6 +510,7 @@ class Network(HasTraits):
     
     # Traits initialization
     main_graph = Instance(nx.DiGraph)
+    main_graph_blacklist = List(Instance(State))
     display_graphs = List(Instance(nx.DiGraph))
     solving_graphs = List(Instance(nx.DiGraph))
     
