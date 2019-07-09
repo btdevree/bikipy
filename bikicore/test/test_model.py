@@ -497,6 +497,7 @@ def test_Model_apply_rules_competition(second_Model_instance, default_Drug_insta
     r0.rule_object = [smi.drug_list[1]]
     r0.object_conf = [None]
     r0.check_rule_traits()
+    smi.rule_list = [r0]
 
     # Create a new Network object without calling dmi.generate_network()
     smi.network = bkcc.Network()
@@ -532,6 +533,7 @@ def test_Model_apply_rules_competition(second_Model_instance, default_Drug_insta
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(smi.network.main_graph, testgraph)
+    assert smi.network.main_graph_blacklist == [s3] # Make sure this illegal state is on the blacklist
 
 # Test that generate_network can process multiple rules
 def test_Model_generate_network_two_rules(default_Model_two_rule_antagonist):
@@ -570,12 +572,10 @@ def test_Model_generate_network_four_rules_competitive(default_Model_four_rule_c
 
     # Create comparision graph shape
     testgraph = nx.DiGraph()
-    testgraph.add_nodes_from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) #1=A, 2=B, 3=R, 4=R*, 5=AR, 6=AR*, 7=BR, 8=BR*, 9=ABR, 10=ABR*
+    testgraph.add_nodes_from([1, 2, 3, 4, 5, 6, 7, 8]) #1=A, 2=B, 3=R, 4=R*, 5=AR, 6=AR*, 7=BR, 8=BR*
     testgraph.add_edges_from([(1, 5), (5, 1), (3, 5), (5, 3), (2, 7), (7, 2), (3, 7), (7, 3),\
                               (1, 6), (6, 1), (4, 6), (6, 4), (2, 8), (8, 2), (4, 8), (8, 4),\
-                              (1, 9), (9, 1), (7, 9), (9, 7), (2, 9), (9, 2), (5, 9), (9, 5),\
-                              (1, 10), (10, 1), (8, 10), (10, 8), (2, 10), (10, 2), (6, 10), (10, 6),\
-                              (3, 4), (4, 3), (5, 6), (6, 5), (7, 8), (8, 7), (9, 10), (10, 9)])
+                              (3, 4), (4, 3), (5, 6), (6, 5), (7, 8), (8, 7)])
     
     # Compare shape of graph
     assert nx.algorithms.isomorphism.is_isomorphic(m4r.network.main_graph, testgraph)
