@@ -347,7 +347,7 @@ def test_Model_apply_rules_irr_association_dimers(model_for_matching_tests):
 def test_Model_apply_rules_irr_disassociation(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
-    # Have rule for simple drug disassociation - "A disassociates from AR([])"
+    # Have rule for simple drug dissociation - "A dissociates from AR([])"
     
     # Setup test network
     s1 = bkcc.State()
@@ -357,7 +357,7 @@ def test_Model_apply_rules_irr_disassociation(model_for_dissociation_matching):
     s1.internal_links = [(0, 1)]
     mdm.network.main_graph.add_node(s1)
     
-    # Apply the existing association rule - "A associates with R"
+    # Apply the existing association rule - "A dissociates from AR"
     mdm.apply_rules_to_network()
 
     # Create comparision graph shape
@@ -372,7 +372,7 @@ def test_Model_apply_rules_irr_disassociation(model_for_dissociation_matching):
 def test_Model_apply_rules_rev_disassociation(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
-    # Have rule for simple drug disassociation - "A disassociates from AR([])", edit to be reversible
+    # Have rule for simple drug disassociation - "A dissociates from AR([])", edit to be reversible
     mdm.rule_list[0].rule = ' reversibly dissociates from '
     
     # Setup test network
@@ -383,7 +383,7 @@ def test_Model_apply_rules_rev_disassociation(model_for_dissociation_matching):
     s1.internal_links = [(0, 1)]
     mdm.network.main_graph.add_node(s1)
     
-    # Apply the existing association rule - "A associates with R"
+    # Apply the existing association rule - "A dissociates from AR"
     mdm.apply_rules_to_network()
 
     # Create comparision graph shape
@@ -414,7 +414,7 @@ def test_Model_apply_rules_rev_association(model_for_matching_tests):
     s2.req_protein_conf_lists = [[0]]
     mmt.network.main_graph.add_node(s2)
         
-    # Apply the existing association rule - "A associates with R"
+    # Apply the association rule
     mmt.apply_rules_to_network()
     
     # Create comparision graph shape
@@ -429,7 +429,7 @@ def test_Model_apply_rules_rev_association(model_for_matching_tests):
 def test_Model_apply_rules_rev_RE_association(model_for_matching_tests):
     mmt = model_for_matching_tests
     
-    # Has rule for simple drug association, modify to reversible association - "A reversibly associates with R"
+    # Has rule for simple drug association, modify to RE association - "A associates and dissociates in rapid equlibrium with R"
     mmt.rule_list[0].rule = ' associates and dissociates in rapid equlibrium with '
     
     # Setup test network
@@ -445,7 +445,7 @@ def test_Model_apply_rules_rev_RE_association(model_for_matching_tests):
     s2.req_protein_conf_lists = [[0]]
     mmt.network.main_graph.add_node(s2)
         
-    # Apply the existing association rule - "A associates with R"
+    # Apply the association rule
     mmt.apply_rules_to_network()
     
     # Create comparision graph shape
@@ -631,6 +631,7 @@ def test_Model_RE_conversion(default_Model_conversion):
    
 # --------------------- Helper method tests in model.py ---------------------------    
             
+    
 # Test for creation methods
 def test_create_new(default_Model_list):
     # Add in when copy logic is created
@@ -1502,3 +1503,159 @@ def test_find_competitive_states(default_Model_competition, default_Drug_instanc
     assert test_results[3][0] == s4 # Will be allowed by link-checking, but overall state disqualified by previous configuration
     assert test_results[3][1] == (1,)
     assert test_results[3][2] == (2,)
+
+    
+# ------Tests for graph edge objects------
+
+
+# Test that association graphs have the right number of edge objects
+def test_Irr_Association_edges(model_for_matching_tests):
+    mmt = model_for_matching_tests
+    
+    # Have rule A associates with R([]), generate corrosponding network
+    mmt.generate_network()
+    
+    # Analysis: We should have two association-ST objects assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*mmt.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Association objects
+    association_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Association)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(association_STobjs) == 2
+    for ST_key in association_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+        
+# Test that association graphs have the right number of edge objects
+def test_Rev_Association_edges(model_for_matching_tests):
+    mmt = model_for_matching_tests
+    
+    # Have rule A associates with R([]), change to reversible association and generate corrosponding network
+    mmt.rule_list[0].rule = ' reversibly associates with '
+    mmt.generate_network()
+    
+    # Analysis: We should have two association-ST objects and association-ST objects assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*mmt.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Association objects
+    association_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Association)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(association_STobjs) == 2
+    for ST_key in association_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+        
+    # Find Dissociation objects
+    dissociation_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Dissociation)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(dissociation_STobjs) == 2
+    for ST_key in dissociation_STobjs:
+        assert ST_counts[ST_key] == 2 # Dissociations require placement on 2 edges each
+        
+# Test that dissociation graphs have the right number of edge objects
+def test_Irr_Dissociation_edges(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Setup test network, must have starting associated state
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A dissociates from AR([0,1])"
+    mdm.apply_rules_to_network()
+
+    # Analysis: We should have one dissociation-ST objects assigned in the network
+    
+    # Get edge info
+    print(*zip(*mdm.network.main_graph.edges(data = 'reaction_type')))
+    test_tails, test_heads, test_STobjs = zip(*mdm.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Dissociation objects
+    dissociation_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Dissociation)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(dissociation_STobjs) == 1
+    for ST_key in dissociation_STobjs:
+        assert ST_counts[ST_key] == 2 # Dissociations require placement on 2 edges each
+        
+# Test that association graphs have the right number of edge objects
+def test_Rev_Dissociation_edges(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Have rule A dissociates from R([0,1])A, change to reversible dissociation and generate corrosponding network
+    mdm.rule_list[0].rule = ' reversibly dissociates from '
+    
+    # Setup test network, must have starting associated state
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A revesibly dissociates from AR([0,1])"
+    mdm.apply_rules_to_network()
+    
+    # Analysis: We should have one dissociation-ST object and one association-ST object assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*mdm.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Dissociation objects
+    dissociation_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Dissociation)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(dissociation_STobjs) == 1
+    for ST_key in dissociation_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+    
+    # Find Association objects
+    association_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Association)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(association_STobjs) == 1
+    for ST_key in association_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+
+# Test that conversion graphs have the right number of edge objects
+def test_Irr_Conversion(default_Model_conversion):
+    dmc = default_Model_conversion
+    
+    # Have rule R(0) converts to R(1), generate corrosponding network
+    dmc.generate_network()
+    
+    # Analysis: We should have one conversion-ST object assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*dmc.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Conversion objects
+    conversion_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Conversion)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(conversion_STobjs) == 1
+    for ST_key in conversion_STobjs:
+        assert ST_counts[ST_key] == 1 # Conversion is irreversible, only 1 edge

@@ -905,13 +905,20 @@ def test_generate_signature_list_any_to_conf_conversion(default_Model_irreversib
     with pytest.raises(TypeError): # counter will still be set to None
         sig_list[0].third_state_count[(dpi, (0,))]
         sig_list[0].third_state_count[(dpi, (1,))]
+
+
 # ------Tests for Network objects------
+
 
 #Test if Network objects have the required properties
 def test_Network_has_main_graph(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph')
+def test_Network_has_main_blacklist(default_Network_instance):
+    assert hasattr(default_Network_instance, 'main_graph_blacklist')
+
     
 # ------Tests for CountingSignature objects------
+
 
 #Test if CountingSignature objects have the required properties
 def test_CountingSignature_has_count_type(default_CountingSignature_instance):
@@ -1002,4 +1009,8 @@ def test_CountingSignature_direct_counts(default_Protein_instance, default_Drug_
     assert test_signature.third_state_count[(dpi, (0,1))] == 1
     assert test_signature.third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
 
-#continue with writing tests.....
+
+    
+# ------Tests for StateTransition objects------
+
+

@@ -7,7 +7,7 @@ import uuid
 import itertools
 import networkx as nx
 from collections import Counter
-from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either
+from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either, Bool
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 # Define classes for the different components of the biochemical system
@@ -18,6 +18,11 @@ class Drug(HasTraits):
     symbol = Str()
     ID = Instance(uuid.UUID) 
     
+    # Want to give a new state an ID right away
+    def __init__(self, *args, **kwargs):
+        self.ID = uuid.uuid4()
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
+    
 class Protein(HasTraits):
     
     # Traits initialization
@@ -26,6 +31,11 @@ class Protein(HasTraits):
     conformation_names = List(Str()) 
     conformation_symbols = List(Str())
     ID = Instance(uuid.UUID) 
+    
+    # Want to give a new state an ID right away
+    def __init__(self, *args, **kwargs):
+        self.ID = uuid.uuid4()
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
     
     # Check if the trait values are valid. Use after user editing of the object, for example.
     def check_protein_traits(self):
@@ -47,7 +57,7 @@ class State(HasTraits):
     req_protein_conf_lists = List(List(Int()))
     internal_links = List(Tuple())
     
-    # Want to give a new state an ID right away, determined by the network generation code
+    # Want to give a new state an ID right away
     def __init__(self, *args, **kwargs):
         self.ID = uuid.uuid4()
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
@@ -56,6 +66,8 @@ class State(HasTraits):
     def autosymbol(self):
         pass
     def autoname(self):
+        pass
+    def autonumber(self, main_graph):
         pass
     
     def generate_component_list(self, return_components_only = False):
@@ -137,37 +149,65 @@ class StateTransition(HasTraits):
     number = Int()
     ID = Instance(uuid.UUID)
     
-class ConformationalChange(StateTransition):
+     # Want to give a new state an ID right away, determined by the network generation code
+    def __init__(self, *args, **kwargs):
+        self.ID = uuid.uuid4()
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
+    
+class Conversion(StateTransition):
     
     # Traits initialization
-    name = Str('activation')
+    name = Str('conversion')
+    reference_direction = Bool()
+    
+    # Keep track of the original conversion direction for better numbering
+    def __init__(self, reference_direction = True, *args, **kwargs):
+        self.reference_direction = reference_direction
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
+    
+    def autonumber(self, main_graph):
+        pass
     
 class Association(StateTransition):
     
     # Traits initialization
     name = Str('association')
+    
+    def autonumber(self, main_graph):
+        pass
 
 class Dissociation(StateTransition):
     
     # Traits initialization
     name = Str('dissociation')
+    
+    def autonumber(self, main_graph):
+        pass
 
-### Leave these for now, but they shouold be simple enough to make when the basic structure of the library is finished
-class RE_ConformationalChange(StateTransition):
+class RE_Conversion(StateTransition):
     
     # Traits initialization
-    name = Str('activation')    
+    name = Str('RE conversion')    
+    
+    def autonumber(self, main_graph):
+        pass
 
 class RE_Dissociation(StateTransition):
     
     # Traits initialization
-    name = Str('dissociation')
+    name = Str('RE dissociation')
     
+    def autonumber(self, main_graph):
+        pass
+
 class RE_Association(StateTransition):
     
     # Traits initialization
-    name = Str('association')
+    name = Str('RE association')
     
+    def autonumber(self, main_graph):
+        pass
+
 # Define class for the rules used to build the network graph
 class Rule(HasTraits):
     # Rules must be created with a reference to the model they belong to, and 

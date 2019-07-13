@@ -570,13 +570,21 @@ class Model(HasTraits):
             
         # Only add the association if the third state is not on the blacklist
         if not any(self._state_match_to_state(associated_state, x, match = 'exact') for x in graph_blacklist):
-        
+            
+            # Create a new Association StateTransition object
+            new_STobj = bkcc.Association()
+            
             # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
-            graph.add_edge(subject_state, associated_state)
-            graph.add_edge(object_state, associated_state)
+            graph.add_edge(subject_state, associated_state, reaction_type = new_STobj)
+            graph.add_edge(object_state, associated_state, reaction_type = new_STobj)
             if reversible:
-                graph.add_edge(associated_state, subject_state)
-                graph.add_edge(associated_state, object_state)
+                
+                # Create a new Dissociation StateTransition object
+                new_STobj = bkcc.Dissociation()
+                
+                # Add reversable edges 
+                graph.add_edge(associated_state, subject_state, reaction_type = new_STobj)
+                graph.add_edge(associated_state, object_state, reaction_type = new_STobj)
     
     def _create_dissociation(self, graph, graph_blacklist, object_state, split_indices, subject_link_list, third_state_link_list, reversible = False):
         # Function to split an object state into the subject state and a remaining third state on a given graph
@@ -623,12 +631,20 @@ class Model(HasTraits):
         if not any(self._state_match_to_state(subject_state, x, match = 'exact') for x in graph_blacklist) and \
             not any(self._state_match_to_state(third_state, x, match = 'exact') for x in graph_blacklist):
             
+            # Create a new Dissociation StateTransition object
+            new_STobj = bkcc.Dissociation()
+                
             # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
-            graph.add_edge(object_state, subject_state)
-            graph.add_edge(object_state, third_state)
+            graph.add_edge(object_state, subject_state, reaction_type = new_STobj)
+            graph.add_edge(object_state, third_state, reaction_type = new_STobj)
             if reversible:
-                 graph.add_edge(subject_state, object_state)
-                 graph.add_edge(third_state, object_state)    
+                 
+                # Create a new Association StateTransition object
+                new_STobj = bkcc.Association() 
+                
+                # Add reversable edges
+                graph.add_edge(subject_state, object_state, reaction_type = new_STobj)
+                graph.add_edge(third_state, object_state, reaction_type = new_STobj)    
 
     def _create_conversion(self, graph, graph_blacklist, subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False):
         # Function to convert the given components in the state to those specified by the rule
