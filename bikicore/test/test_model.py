@@ -1539,7 +1539,7 @@ def test_Rev_Association_edges(model_for_matching_tests):
     mmt.rule_list[0].rule = ' reversibly associates with '
     mmt.generate_network()
     
-    # Analysis: We should have two association-ST objects and association-ST objects assigned in the network
+    # Analysis: We should have two association-ST objects and dissociation-ST objects assigned in the network
     
     # Get edge info
     test_tails, test_heads, test_STobjs = zip(*mmt.network.main_graph.edges(data = 'reaction_type'))
@@ -1595,7 +1595,7 @@ def test_Irr_Dissociation_edges(model_for_dissociation_matching):
     for ST_key in dissociation_STobjs:
         assert ST_counts[ST_key] == 2 # Dissociations require placement on 2 edges each
         
-# Test that association graphs have the right number of edge objects
+# Test that dissociation graphs have the right number of edge objects
 def test_Rev_Dissociation_edges(model_for_dissociation_matching):
     mdm = model_for_dissociation_matching
     
@@ -1657,5 +1657,131 @@ def test_Irr_Conversion(default_Model_conversion):
         
     # See if we get the expected number of objects and connections
     assert len(conversion_STobjs) == 1
+    assert conversion_STobjs[0].reference_direction == True # A single converstion should always be the reference direction
     for ST_key in conversion_STobjs:
-        assert ST_counts[ST_key] == 1 # Conversion is irreversible, only 1 edge
+        assert ST_counts[ST_key] == 1 # Each Conversion reaction requires only 1 edge
+        
+# Test that conversion graphs have the right number of edge objects
+def test_Rev_Conversion(default_Model_conversion):
+    dmc = default_Model_conversion
+    
+    # Have rule R(0) converts to R(1), change to reversible conversion and generate corrosponding network
+    dmc.rule_list[0].rule = ' reversibly converts to '
+    dmc.generate_network()
+    
+    # Analysis: We should have two conversion-ST object assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*dmc.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Conversion objects
+    conversion_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.Conversion)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(conversion_STobjs) == 2
+    assert conversion_STobjs[0].reference_direction ^ conversion_STobjs[1].reference_direction # XOR (these values are booleans), only one direction should be reference
+    for ST_key in conversion_STobjs:
+        assert ST_counts[ST_key] == 1 # Each Conversion reaction requires only 1 edge
+
+# Test that association graphs have the right number of edge objects
+def test_RE_Association_edges(model_for_matching_tests):
+    mmt = model_for_matching_tests
+    
+    # Have rule A associates with R([]), change to rapid equlibrium association and generate corrosponding network
+    mmt.rule_list[0].rule = ' associates and dissociates in rapid equlibrium with '
+    mmt.generate_network()
+    
+    # Analysis: We should have two RE association-ST objects and RE dissociation-ST objects assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*mmt.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Association objects
+    association_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.RE_Association)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(association_STobjs) == 2
+    for ST_key in association_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+        
+    # Find Dissociation objects
+    dissociation_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.RE_Dissociation)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(dissociation_STobjs) == 2
+    for ST_key in dissociation_STobjs:
+        assert ST_counts[ST_key] == 2 # Dissociations require placement on 2 edges each
+        
+# Test that RE dissociation graphs have the right number of edge objects
+def test_RE_Dissociation_edges(model_for_dissociation_matching):
+    mdm = model_for_dissociation_matching
+    
+    # Have rule A dissociates from R([0,1])A, change to rapid equlibrium dissociation and generate corrosponding network
+    mdm.rule_list[0].rule = ' dissociates and reassociates in rapid equlibrium from '
+    
+    # Setup test network, must have starting associated state
+    s1 = bkcc.State()
+    s1.required_drug_list = [mdm.drug_list[0]]
+    s1.required_protein_list = [mdm.protein_list[0]]
+    s1.req_protein_conf_lists = [[0, 1]]
+    s1.internal_links = [(0, 1)]
+    mdm.network.main_graph.add_node(s1)
+    
+    # Apply the existing association rule - "A revesibly dissociates and reassociates in rapid equlibrium from AR([0,1])"
+    mdm.apply_rules_to_network()
+    
+    # Analysis: We should have one RE dissociation-ST object and one RE association-ST object assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*mdm.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find Dissociation objects
+    dissociation_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.RE_Dissociation)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(dissociation_STobjs) == 1
+    for ST_key in dissociation_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+    
+    # Find Association objects
+    association_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.RE_Association)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(association_STobjs) == 1
+    for ST_key in association_STobjs:
+        assert ST_counts[ST_key] == 2 # Associations require placement on 2 edges each
+
+
+# Test that RE conversion graphs have the right number of edge objects
+def test_RE_Conversion(default_Model_conversion):
+    dmc = default_Model_conversion
+    
+    # Have rule R(0) converts to R(1), change to Rapid equlibrium conversion and generate corrosponding network
+    dmc.rule_list[0].rule = ' converts in rapid equlibrium to '
+    dmc.generate_network()
+    
+    # Analysis: We should have two RE conversion-ST object assigned in the network
+    
+    # Get edge info
+    test_tails, test_heads, test_STobjs = zip(*dmc.network.main_graph.edges(data = 'reaction_type'))
+
+    # Count StateTransition objects
+    ST_counts = collections.Counter(test_STobjs)
+    
+    # Find RE Conversion objects
+    conversion_STobjs = [x for x in ST_counts.keys() if isinstance(x, bkcc.RE_Conversion)]
+        
+    # See if we get the expected number of objects and connections
+    assert len(conversion_STobjs) == 2
+    assert conversion_STobjs[0].reference_direction ^ conversion_STobjs[1].reference_direction # XOR (these values are booleans), only one direction should be reference
+    for ST_key in conversion_STobjs:
+        assert ST_counts[ST_key] == 1 # Each Conversion reaction requires only 1 edge

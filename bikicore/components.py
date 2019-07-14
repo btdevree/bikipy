@@ -182,7 +182,7 @@ class Dissociation(StateTransition):
     name = Str('dissociation')
     
     def autonumber(self, main_graph):
-        pass
+        pass 
 
 class RE_Conversion(StateTransition):
     

@@ -36,10 +36,10 @@ def modified_Protein_instance():
     mpi.conformation_symbols = ['', '*']
     return mpi
 
-# Create a default ConformationalChange object for reuse in tests
+# Create a default Conversion object for reuse in tests
 @pytest.fixture()
-def default_ConfChange_instance():
-    return bkcc.ConformationalChange()
+def default_Conversion_instance():
+    return bkcc.Conversion()
     
 # Create a default Association object for reuse in tests
 @pytest.fixture()
@@ -51,10 +51,10 @@ def default_Association_instance():
 def default_Dissociation_instance():
     return bkcc.Dissociation()
     
-# Create a default RE_ConformationalChange object for reuse in tests
+# Create a default RE_Conversion object for reuse in tests
 @pytest.fixture()
-def default_RE_ConfChange_instance():
-    return bkcc.RE_ConformationalChange()
+def default_RE_Conversion_instance():
+    return bkcc.RE_Conversion()
     
 # Create a default RE_Association object for reuse in tests
 @pytest.fixture()
@@ -338,15 +338,15 @@ def test_get_component_by_number_with_conformation(default_State_instance, defau
         dsi.get_component_by_number(-1, return_conformations = True)
         dsi.get_component_by_number(4, True)
         
-# -------Tests for ConformationalChange objects-------
+# -------Tests for Conversion objects-------
 
-# Test if ConformationalChange objects have the required properties
-def test_ConfChange_has_name(default_ConfChange_instance):
-    assert hasattr(default_ConfChange_instance, 'name')
-def test_ConfChange_has_number(default_ConfChange_instance):
-    assert hasattr(default_ConfChange_instance, 'number')
-def test_ConfChange_has_ID(default_ConfChange_instance):
-    assert hasattr(default_ConfChange_instance, 'ID')
+# Test if Conversion objects have the required properties
+def test_Conversion_has_name(default_Conversion_instance):
+    assert hasattr(default_Conversion_instance, 'name')
+def test_Conversion_has_number(default_Conversion_instance):
+    assert hasattr(default_Conversion_instance, 'number')
+def test_Conversion_has_ID(default_Conversion_instance):
+    assert hasattr(default_Conversion_instance, 'ID')
     
 #Test if Association objects have the required properties
 def test_Association_has_name(default_Association_instance):
@@ -364,13 +364,13 @@ def test_Dissociation_has_number(default_Dissociation_instance):
 def test_Dissociation_has_ID(default_Dissociation_instance):
     assert hasattr(default_Dissociation_instance, 'ID')
     
-# Test if RE_ConformationalChange objects have the required properties
-def test_RE_ConfChange_has_name(default_RE_ConfChange_instance):
-    assert hasattr(default_RE_ConfChange_instance, 'name')
-def test_RE_ConfChange_has_number(default_RE_ConfChange_instance):
-    assert hasattr(default_RE_ConfChange_instance, 'number')
-def test_RE_ConfChange_has_ID(default_RE_ConfChange_instance):
-    assert hasattr(default_RE_ConfChange_instance, 'ID')
+# Test if RE_Conversion objects have the required properties
+def test_RE_Conversion_has_name(default_RE_Conversion_instance):
+    assert hasattr(default_RE_Conversion_instance, 'name')
+def test_RE_Conversion_has_number(default_RE_Conversion_instance):
+    assert hasattr(default_RE_Conversion_instance, 'number')
+def test_RE_Conversion_has_ID(default_RE_Conversion_instance):
+    assert hasattr(default_RE_Conversion_instance, 'ID')
     
 #Test if RE_Association objects have the required properties
 def test_RE_Association_has_name(default_RE_Association_instance):

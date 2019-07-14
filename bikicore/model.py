@@ -113,7 +113,7 @@ class Model(HasTraits):
                     elif current_rule.rule == ' reversibly associates with ':
                         self._create_association(graph, graph_blacklist, *current_state_tuple, current_link_tuple, reversible = True)
                     elif current_rule.rule == ' associates and dissociates in rapid equlibrium with ':
-                        self._create_association(graph, graph_blacklist, *current_state_tuple, current_link_tuple, reversible = True)
+                        self._create_association(graph, graph_blacklist, *current_state_tuple, current_link_tuple, reversible = True, rapid_equlibrium = True)
          
             # Dissociation
             elif current_rule.rule == ' dissociates from ' or current_rule.rule == ' reversibly dissociates from ' \
@@ -138,7 +138,7 @@ class Model(HasTraits):
                     elif current_rule.rule == ' reversibly dissociates from ':
                         self._create_dissociation(graph, graph_blacklist, *current_state_split_tuple, *current_link_tuple, reversible = True)
                     elif current_rule.rule == ' dissociates and reassociates in rapid equlibrium from ':
-                        self._create_dissociation(graph, graph_blacklist, *current_state_split_tuple, *current_link_tuple, reversible = True)
+                        self._create_dissociation(graph, graph_blacklist, *current_state_split_tuple, *current_link_tuple, reversible = True, rapid_equlibrium = True)
             
             # Conformational changes and reactions
             elif current_rule.rule == ' converts to ' or current_rule.rule == ' reversibly converts to ' \
@@ -163,7 +163,7 @@ class Model(HasTraits):
                     if current_rule.rule == ' reversibly converts to ':
                         self._create_conversion(graph, graph_blacklist, *convert_tuple, reversible = True) 
                     if current_rule.rule == ' converts in rapid equlibrium to ':
-                        self._create_conversion(graph, graph_blacklist, *convert_tuple, reversible = True)
+                        self._create_conversion(graph, graph_blacklist, *convert_tuple, reversible = True, rapid_equlibrium = True)
             
             # Competition rule
             elif current_rule.rule == ' is competitive with ':   
@@ -542,11 +542,11 @@ class Model(HasTraits):
         else:
             return False
     
-    def _create_association(self, graph, graph_blacklist, subject_state, object_state, new_link, reversible = False):
+    def _create_association(self, graph, graph_blacklist, subject_state, object_state, new_link, reversible = False, rapid_equlibrium = False):
         # Function to connect two states into an association relationship on the given graph
         # Creates a new associated state if one cannot be found in existing graph
         # New link must be given for components in the assocated state 
-                     
+             
         # Create lists of components/conformations for a possible associated state
         sub_comp, sub_conf = subject_state.generate_component_list()
         obj_comp, obj_conf = object_state.generate_component_list()
@@ -554,7 +554,7 @@ class Model(HasTraits):
         associated_conformation_list = sub_conf + obj_conf
         associated_old_links = self._combine_internal_link_lists(subject_state, object_state)
         associated_links = associated_old_links + [new_link]
-                
+       
         # See if this possible state already exists in the graph
         for current_state in graph.__iter__():
             if self._state_match_to_component_lists(current_state, associated_component_list, associated_conformation_list, associated_links, match = 'exact'):
@@ -571,8 +571,15 @@ class Model(HasTraits):
         # Only add the association if the third state is not on the blacklist
         if not any(self._state_match_to_state(associated_state, x, match = 'exact') for x in graph_blacklist):
             
+            # If the reaction is in rapid equlibirum, enforce that it must be reversable
+            if rapid_equlibrium:
+                reversible = True      
+            
             # Create a new Association StateTransition object
-            new_STobj = bkcc.Association()
+            if rapid_equlibrium:
+                new_STobj = bkcc.RE_Association()
+            else:
+                new_STobj = bkcc.Association()
             
             # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
             graph.add_edge(subject_state, associated_state, reaction_type = new_STobj)
@@ -580,13 +587,16 @@ class Model(HasTraits):
             if reversible:
                 
                 # Create a new Dissociation StateTransition object
-                new_STobj = bkcc.Dissociation()
+                if rapid_equlibrium:
+                    new_STobj = bkcc.RE_Dissociation()
+                else:
+                    new_STobj = bkcc.Dissociation()
                 
                 # Add reversable edges 
                 graph.add_edge(associated_state, subject_state, reaction_type = new_STobj)
                 graph.add_edge(associated_state, object_state, reaction_type = new_STobj)
     
-    def _create_dissociation(self, graph, graph_blacklist, object_state, split_indices, subject_link_list, third_state_link_list, reversible = False):
+    def _create_dissociation(self, graph, graph_blacklist, object_state, split_indices, subject_link_list, third_state_link_list, reversible = False, rapid_equlibrium = False):
         # Function to split an object state into the subject state and a remaining third state on a given graph
         # Creates new states if the generated ones cannot be found in existing graph
         # Link lists must be given for components in the split states
@@ -631,8 +641,15 @@ class Model(HasTraits):
         if not any(self._state_match_to_state(subject_state, x, match = 'exact') for x in graph_blacklist) and \
             not any(self._state_match_to_state(third_state, x, match = 'exact') for x in graph_blacklist):
             
+            # If the reaction is in rapid equlibirum, enforce that it must be reversable
+            if rapid_equlibrium:
+                reversible = True        
+                
             # Create a new Dissociation StateTransition object
-            new_STobj = bkcc.Dissociation()
+            if rapid_equlibrium:
+                new_STobj = bkcc.RE_Dissociation()
+            else:
+                new_STobj = bkcc.Dissociation()
                 
             # Add edges to the associated state from the object and subject states (NetworkX will add any states that don't alreay exist in the graph)
             graph.add_edge(object_state, subject_state, reaction_type = new_STobj)
@@ -640,13 +657,16 @@ class Model(HasTraits):
             if reversible:
                  
                 # Create a new Association StateTransition object
-                new_STobj = bkcc.Association() 
+                if rapid_equlibrium:
+                    new_STobj = bkcc.RE_Association() 
+                else:
+                    new_STobj = bkcc.Association() 
                 
                 # Add reversable edges
                 graph.add_edge(subject_state, object_state, reaction_type = new_STobj)
                 graph.add_edge(third_state, object_state, reaction_type = new_STobj)    
 
-    def _create_conversion(self, graph, graph_blacklist, subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False):
+    def _create_conversion(self, graph, graph_blacklist, subject_state, new_component_list, new_conformation_list, new_link_tuples, reversible = False, rapid_equlibrium = False):
         # Function to convert the given components in the state to those specified by the rule
         # Creates new states if the generated ones cannot be found in existing graph
         
@@ -666,10 +686,28 @@ class Model(HasTraits):
         # Only add the converstion if the object state is not on the blacklist
         if not any(self._state_match_to_state(object_state, x, match = 'exact') for x in graph_blacklist):
             
+            # If the reaction is in rapid equlibirum, enforce that it must be reversable
+            if rapid_equlibrium:
+                reversible = True        
+            
+            # Create a new Conversion StateTransition object
+            if rapid_equlibrium:
+                new_STobj = bkcc.RE_Conversion(reference_direction = True) # This is the direction that corrsoponds to the rule
+            else:
+                new_STobj = bkcc.Conversion(reference_direction = True) # This is the direction that corrsoponds to the rule
+                
             # Add edges to convert states (NetworkX will add any states that don't alreay exist in the graph)
-            graph.add_edge(subject_state, object_state)
+            graph.add_edge(subject_state, object_state, reaction_type = new_STobj)
             if reversible:
-                 graph.add_edge(object_state, subject_state)
+                
+                # Create a new Conversion StateTransition object
+                if rapid_equlibrium:
+                    new_STobj = bkcc.RE_Conversion(reference_direction = False) # This is the opposite direction of the rule 
+                else:
+                    new_STobj = bkcc.Conversion(reference_direction = False) # This is the opposite direction of the rule 
+                
+                # Add reversable edges
+                graph.add_edge(object_state, subject_state, reaction_type = new_STobj)
               
     def _remove_states(self, graph, graph_blacklist, state_list):
         # Function to remove the listed states from the indicated graph
