@@ -6,6 +6,8 @@ biochemical system, the model, and the experiments performed.
 import uuid
 import itertools
 import networkx as nx
+import sympy as sp
+from sympy.core.basic import Basic as spBaseClass 
 from collections import Counter
 from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either, Bool
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
@@ -51,6 +53,7 @@ class State(HasTraits):
     name = Str()
     symbol = Str()
     number = Int()
+    variable = Instance(spBaseClass) # Must be a sympy object
     ID = Instance(uuid.UUID)
     required_drug_list = List(Instance(Drug))
     required_protein_list = List(Instance(Protein))
@@ -62,12 +65,120 @@ class State(HasTraits):
         self.ID = uuid.uuid4()
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
     
-    # Names and symbols are created from the properties of the state, but the state's number is generated at a model level or carried over from parent models
-    def autosymbol(self):
-        pass
+    def autosymbol(self, method = 0):
+        # Create the generated symbol name that will usually be the one used in display. 
+        # Symbols are created from the components of the state
+        # Parameters:
+            # method - integer, default = 0. Choose one of the different methods of sorting the components
+
+        # Get the component lists of the state
+        indices, components, conformations = self.enumerate_components(True)
+        
+        # Order list using method 0
+        if method == 0 and len(indices) > 1:
+            # We will sort the proteins by conformation, then move any linked proteins together,
+            # then move drugs next to their linked protein. 
+            
+            # Make some sorting tuples
+            tuple_list = zip(components, indices)
+            
+            # Step 1 - Sort proteins by conformation
+            # Put in standard timsort order
+            tuple_list.sort()
+            
+            # Divide list into sublists with the same components
+            group_keys, group_tuples = itertools.groupby(tuple_list, key = lambda x: x[0]) # Group by the first element of the tuple
+            
+            # Work on one group at a time
+            sorted_groups = []
+            for current_group in group_tuples:
+                
+                # Insertion sort the group of components
+                group_tuple_list = []
+                for current_tuple in current_group:
+                    
+                    # Get current conformation
+                    current_conf = conformations[current_tuple[0]]
+                    
+                    # Compare tuple against elements until we find one that belongs behind it
+                    for test_position in range(len(group_tuple_list)):
+                        
+                        # Get test conformation
+                        test_conf = conformations[group_tuple_list[test_position[0]]]
+                        
+                        # Insert shorter conformations lists before the long one
+                        if len(current_conf) < len(test_conf):
+                            group_tuple_list.insert(test_position, current_tuple)
+                            break
+                        
+                        # Test values where the length of the conformation lists are equal
+                        elif len(current_conf) == len(test_conf):
+                            
+                                # Inset this conformation if any of it's values are smaller than the test position's
+                                if any([current_conf[i] < test_conf[i] for i in range(len(current_conf))]):
+                                    group_tuple_list.insert(test_position, current_tuple)
+                                    break
+                        
+                    # Add to the end if no insertion conditions are found
+                    else:
+                         group_tuple_list.append(current_tuple)   
+                                
+                # Add each sorted group to the growing list
+                sorted_groups.extend(group_tuple_list)
+            
+            # Step 2 - Place linked proteins next to each other, then drugs linked to proteins
+            
+            # Find simple links in the internal link list - any links to multiple components must (should?) also have a corrosponding simple link tuple
+            simple_links = [link for link in self.internal_links if isinstance(link[0], int) and isinstance(link[1], int)]
+            
+            # Find links that are from proteins to proteins
+            protein_links = [link for link in simple_links if isinstance(components[link[0]], Protein) and isinstance(components[link[1]], Protein)]
+            
+            # Find links that are from drugs to proteins. If needed, flip link to make sure the drug index is listed first.
+            drug_links_p1 = [(x, y) for (x, y) in simple_links if isinstance(components[x], Drug) and isinstance(components[y], Protein)]
+            drug_links_p2 = [(y, x) for (x, y) in simple_links if isinstance(components[x], Protein) and isinstance(components[y], Drug)]    
+            
+            # Make a list of links to use for moving, in the order desired
+            links_for_moving = protein_links + drug_links_p1 + drug_links_p2
+            
+            # Move stuff around
+            for current_link in links_for_moving:# Local function to move sorting tuple
+           
+                # Find first element and remove it
+                [pop_index] = [i for i, x in enumerate(sorted_groups) if x[0] == current_link[0]]
+                moving_tuple = sorted_groups.pop(pop_index)
+                
+                # Find the second element and insert at that position
+                [insert_index] = [i for i, x in enumerate(sorted_groups) if x[0] == current_link[1]]
+                sorted_groups.insert(insert_index, moving_tuple)
+                
+            # Step 3 - Convert to name string
+            
+            # Process each sorting tuple in order
+            symbol_list = []
+            for current_tuple in sorted_groups:
+                current_component = current_tuple[1]
+                
+                # Get the symbol for the component
+                comp_str = current_component.symbol
+                
+                # Get the symbol(s) for the conformation(s)
+                conf_str_list = []
+                for conf_index in current_tuple[2]:
+                    conf_str_list.append(current_component.conformation_symbols[conf_index])
+                conf_str = ''.join(conf_str_list)
+                
+                # Stick the parts together and save in list
+                symbol_list.append(comp_str + conf_str)
+                
+            # Assemble and assign to the state
+            self.symbol = ''.join(symbol_list)       
+    
     def autoname(self):
         pass
     def autonumber(self, main_graph):
+        pass
+    def autovariable(self, main_graph):
         pass
     
     def generate_component_list(self, return_components_only = False):
@@ -147,6 +258,7 @@ class StateTransition(HasTraits):
     
     # Traits initialization
     number = Int()
+    variable = Instance(spBaseClass) # Must be a sympy object
     ID = Instance(uuid.UUID)
     
      # Want to give a new state an ID right away, determined by the network generation code
@@ -232,8 +344,8 @@ class Rule(HasTraits):
                      ' converts to ',
                      ' reversibly converts to ',
                      ' converts in rapid equlibrium to ',
-                     ' is competitive with ',
-                     ' can only bind along with ']
+                     ' is competitive with ']
+                     #' can only bind along with ']
                      #' is constrained to be the same value as ',
                      #' does not exist.'] #Not sure how to implement these rules right now, maybe need a refactor into different types of rules? 
     rule = Enum(*_rule_choices)
@@ -616,6 +728,5 @@ class CountingSignature(HasTraits):
             # Convert the conformation lists to hashable tuples
             hashable_conformations = [(*x,) if x != None else x for x in conformations]
             return Counter([*zip(components, hashable_conformations)])
-        
         
     

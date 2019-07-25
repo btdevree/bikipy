@@ -338,7 +338,58 @@ def test_get_component_by_number_with_conformation(default_State_instance, defau
         dsi.get_component_by_number(-1, return_conformations = True)
         dsi.get_component_by_number(4, True)
         
-# -------Tests for Conversion objects-------
+# Test for autosymbol fuction on a drug
+def test_State_autosymbol_drug(default_State_instance, default_Drug_instance):
+    dsi = default_State_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi]
+    
+    # Call autosymbol
+    dsi.autosymbol()
+    
+    # Test name
+    assert dsi.symbol == 'A'
+    
+# Test for autosymbol fuction on a protein
+def test_State_autosymbol_protein(default_State_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_protein_list = [dpi]
+    dsi.req_protein_conf_lists = [[1]]
+    
+    # Call autosymbol
+    dsi.autosymbol()
+    
+    # Test name
+    assert dsi.symbol == 'R*'
+    
+# Test for autosymbol fuction on a drug-protein complex
+def test_State_autosymbol_drug_and_protein(default_State_instance, default_Protein_instance, default_Drug_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi]
+    dsi.required_protein_list = [dpi]
+    dsi.req_protein_conf_lists = [[1]]
+    dsi.internal_links = [(0,1)]
+    
+    # Call autosymbol
+    dsi.autosymbol()
+    
+    # Test name
+    assert dsi.symbol == 'AR*'
+
+    
+    
+# -------Tests for State Transition objects-------
+
+
 
 # Test if Conversion objects have the required properties
 def test_Conversion_has_name(default_Conversion_instance):
@@ -1010,7 +1061,6 @@ def test_CountingSignature_direct_counts(default_Protein_instance, default_Drug_
     assert test_signature.third_state_count[(dpi, (0))] == 0 # Check if a non-existing state is zero (actually returned as False, I think)
 
 
-    
-# ------Tests for StateTransition objects------
+# ------Tests for  objects------
 
 
