@@ -71,40 +71,42 @@ class State(HasTraits):
         # Parameters:
             # method - integer, default = 0. Choose one of the different methods of sorting the components
 
-        # Get the component lists of the state
-        indices, components, conformations = self.enumerate_components(True)
-        
+        # Get the component lists of the state - NOTE: This is stupid, i unzip then rezip. Future cleanup.
+        (indices, components, conformations) = zip(*self.enumerate_components(True))
+
         # Order list using method 0
-        if method == 0 and len(indices) > 1:
+        if method == 0:
             # We will sort the proteins by conformation, then move any linked proteins together,
             # then move drugs next to their linked protein. 
             
             # Make some sorting tuples
-            tuple_list = zip(components, indices)
-            
+            tuple_list = [*zip(components, indices)]
+
             # Step 1 - Sort proteins by conformation
             # Put in standard timsort order
-            tuple_list.sort()
+            tuple_list.sort(key = lambda x: x[0].symbol)
             
             # Divide list into sublists with the same components
-            group_keys, group_tuples = itertools.groupby(tuple_list, key = lambda x: x[0]) # Group by the first element of the tuple
+            group_tuples = []
+            for group_key, group_iterator in itertools.groupby(tuple_list, key = lambda x: x[0]): # Group by the first element of the tuple
+                group_tuples.append(list(group_iterator))
             
             # Work on one group at a time
             sorted_groups = []
             for current_group in group_tuples:
-                
+
                 # Insertion sort the group of components
                 group_tuple_list = []
                 for current_tuple in current_group:
-                    
+
                     # Get current conformation
-                    current_conf = conformations[current_tuple[0]]
+                    current_conf = conformations[current_tuple[1]]
                     
                     # Compare tuple against elements until we find one that belongs behind it
                     for test_position in range(len(group_tuple_list)):
                         
                         # Get test conformation
-                        test_conf = conformations[group_tuple_list[test_position[0]]]
+                        test_conf = conformations[group_tuple_list[test_position[1]]]
                         
                         # Insert shorter conformations lists before the long one
                         if len(current_conf) < len(test_conf):
@@ -145,11 +147,11 @@ class State(HasTraits):
             for current_link in links_for_moving:# Local function to move sorting tuple
            
                 # Find first element and remove it
-                [pop_index] = [i for i, x in enumerate(sorted_groups) if x[0] == current_link[0]]
+                [pop_index] = [i for i, x in enumerate(sorted_groups) if x[1] == current_link[0]]
                 moving_tuple = sorted_groups.pop(pop_index)
                 
                 # Find the second element and insert at that position
-                [insert_index] = [i for i, x in enumerate(sorted_groups) if x[0] == current_link[1]]
+                [insert_index] = [i for i, x in enumerate(sorted_groups) if x[1] == current_link[1]]
                 sorted_groups.insert(insert_index, moving_tuple)
                 
             # Step 3 - Convert to name string
@@ -157,22 +159,24 @@ class State(HasTraits):
             # Process each sorting tuple in order
             symbol_list = []
             for current_tuple in sorted_groups:
-                current_component = current_tuple[1]
+                current_component = current_tuple[0]
                 
                 # Get the symbol for the component
                 comp_str = current_component.symbol
                 
                 # Get the symbol(s) for the conformation(s)
-                conf_str_list = []
-                for conf_index in current_tuple[2]:
-                    conf_str_list.append(current_component.conformation_symbols[conf_index])
-                conf_str = ''.join(conf_str_list)
+                if isinstance(current_component, Protein):
+                    conf_str_list = [current_component.conformation_symbols[i] for i in conformations[current_tuple[1]]]
+                    conf_str = ','.join(conf_str_list)
+                else:
+                    conf_str = ''
                 
                 # Stick the parts together and save in list
                 symbol_list.append(comp_str + conf_str)
                 
             # Assemble and assign to the state
-            self.symbol = ''.join(symbol_list)       
+            self.symbol = ''.join(symbol_list)
+        # End Method 0
     
     def autoname(self):
         pass
@@ -672,6 +676,35 @@ class Network(HasTraits):
         self.main_graph = nx.DiGraph()
         self.display_graphs = []
         self.solving_graphs = []
+        
+    def autonumber(self):
+        # Give each state and edge state-transition object in the main graph a number
+        # Sort states/edges by length for numbering, but no more organization than that
+    
+        # Get the states as a list sorted by length of component lists
+        state_list = sorted(self.main_graph.__iter__(), key = lambda x: len(x.required_drug_list) + len(x.required_protein_list))
+        # Number states
+        for current_index, current_state in enumerate(state_list):
+            current_state.number = current_index + 1 # Avoid using number 0, since a null state often has a specific meaning
+        
+        # Number edge ST objects via their connection to the states (so in general, low number edges on low number states)
+        current_number = 1 # Avoid using number 0, since a null state often has a specific meaning
+        for current_state in state_list:
+            
+            # Find edges with current state as tail and visit each one
+            edge_tuples = [x for x in self.main_graph.out_edges(current_state, 'reaction_type')]
+            for current_edge_tuple in edge_tuples:
+                
+                # Handle association rules
+                if isinstance(current_edge_tuple[2], A
+            #
+            #HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            pass
+
+    
+    def autovariable(self):
+        pass
+    
         
 class CountingSignature(HasTraits):
     # Used for storing information about the number of elements involved in state to state transistion reactions

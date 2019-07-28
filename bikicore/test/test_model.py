@@ -234,6 +234,7 @@ def default_Model_competition(second_Model_instance):
     smi.rule_list = [r0]
     return smi
 
+
 # ---- Unit tests ----
 
 # --Tests for Model objects--

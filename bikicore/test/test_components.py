@@ -119,7 +119,7 @@ def default_Model_irreversible_dissociation(default_Model_instance):
 def default_Model_irreversible_conversion(default_Model_instance):
     dmi = default_Model_instance
     
-    #Setup testing rule for a correct drug dissociation - "R(0) converts to R(1)"
+    #Setup testing rule for a conformation conversion - "R(0) converts to R(1)"
     r1 = bkcc.Rule(dmi)
     r1.rule_subject = [dmi.protein_list[0]]
     r1.subject_conf = [[0]]
@@ -135,7 +135,7 @@ def default_Model_irreversible_conversion(default_Model_instance):
 def modified_Model_irreversible_conversion(modified_Model_instance):
     mmi = modified_Model_instance
     
-    #Setup testing rule for a correct drug dissociation - "R converts to pR"
+    #Setup testing rule for a protein conversion - "R converts to pR"
     r1 = bkcc.Rule(mmi)
     r1.rule_subject = [mmi.protein_list[0]]
     r1.subject_conf = [[]]
@@ -170,6 +170,30 @@ def default_State_instance():
 @pytest.fixture()
 def default_CountingSignature_instance():
     return bkcc.CountingSignature('components only')
+
+# Create a default model with main graph for reuse
+@pytest.fixture()
+def default_two_state_antagonist_model_with_main_graph(default_Model_irreversible_association):
+    dmi = default_Model_irreversible_association
+    
+    # Have rule A dissociates with R, change to reversible association
+    dmi.rule_list[0].rule = ' reversibly associates with '
+    
+    # Add rule for a conformation conversion - "R(0) converts to R(1)"
+    r1 = bkcc.Rule(dmi)
+    r1.rule_subject = [dmi.protein_list[0]]
+    r1.subject_conf = [[0]]
+    r1.rule = ' reversibly converts to '
+    r1.rule_object = [dmi.protein_list[0]]
+    r1.object_conf = [[1]]
+    r1.check_rule_traits()
+    dmi.rule_list.append(r1)
+    
+    # Make network on main graph return
+    dmi.generate_network()
+
+    return dmi
+
 
 # ------------------------------ Unit tests -----------------------------------
 
@@ -338,7 +362,7 @@ def test_get_component_by_number_with_conformation(default_State_instance, defau
         dsi.get_component_by_number(-1, return_conformations = True)
         dsi.get_component_by_number(4, True)
         
-# Test for autosymbol fuction on a drug
+# Test for autosymbol function with a drug
 def test_State_autosymbol_drug(default_State_instance, default_Drug_instance):
     dsi = default_State_instance
     ddi = default_Drug_instance # For typing convenience
@@ -352,8 +376,8 @@ def test_State_autosymbol_drug(default_State_instance, default_Drug_instance):
     # Test name
     assert dsi.symbol == 'A'
     
-# Test for autosymbol fuction on a protein
-def test_State_autosymbol_protein(default_State_instance, default_Drug_instance):
+# Test for autosymbol function with a protein
+def test_State_autosymbol_protein(default_State_instance, default_Protein_instance):
     dsi = default_State_instance
     dpi = default_Protein_instance # For typing convenience
     
@@ -367,7 +391,7 @@ def test_State_autosymbol_protein(default_State_instance, default_Drug_instance)
     # Test name
     assert dsi.symbol == 'R*'
     
-# Test for autosymbol fuction on a drug-protein complex
+# Test for autosymbol function with a drug-protein complex
 def test_State_autosymbol_drug_and_protein(default_State_instance, default_Protein_instance, default_Drug_instance):
     dsi = default_State_instance
     dpi = default_Protein_instance
@@ -384,7 +408,25 @@ def test_State_autosymbol_drug_and_protein(default_State_instance, default_Prote
     
     # Test name
     assert dsi.symbol == 'AR*'
-
+    
+# Test for autosymbol function with a complex drug-protein complex
+def test_State_autosymbol_complex_drug_and_protein(default_State_instance, default_Protein_instance, default_Drug_instance, modified_Protein_instance):
+    dsi = default_State_instance
+    dpi = default_Protein_instance
+    ddi = default_Drug_instance
+    mpi = modified_Protein_instance # For typing convenience
+    
+    # Create a state
+    dsi.required_drug_list = [ddi]
+    dsi.required_protein_list = [dpi, mpi]
+    dsi.req_protein_conf_lists = [[1], [0, 1]]
+    dsi.internal_links = [(0, 2), (2, 1)]
+    
+    # Call autosymbol
+    dsi.autosymbol()
+    
+    # Test name
+    assert dsi.symbol == 'ApR,*R*'
     
     
 # -------Tests for State Transition objects-------
@@ -966,7 +1008,62 @@ def test_Network_has_main_graph(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph')
 def test_Network_has_main_blacklist(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph_blacklist')
+    
+# Test for autonumber function on nodes
+def test_Network_autonumber_node(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Call autonumber using the main graph on the model
+    dam.network.autonumber()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    # The singleton states should be 1, 2, and 3. Should add comparision operators to states so they can be sorted better, but for now we sort by component length only
+    acceptable_numbers = [1, 2, 3] # we should be able to consume this without error
+    for teststate in singletons:
+        acceptable_numbers.remove(teststate.number)
+    assert len(acceptable_numbers) == 0
+    
+    # The two component states should be 4 and 5. 
+    acceptable_numbers = [4, 5] # we should be able to consume this without error
+    for teststate in two_components:
+        acceptable_numbers.remove(teststate.number)
+    assert len(acceptable_numbers) == 0
 
+# Test for autonumber function on edges
+def test_Network_autonumber_edge(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Call autonumber using the main graph on the model
+    dam.network.autonumber()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    singleton_tail_edges = [x for u, v, x in dam.network.main_graph.edges('reaction_type') if u in singletons]
+    two_comp_tail_edges = [x for u, v, x in dam.network.main_graph.edges('reaction_type') if u in two_components]
+    
+    # The singleton states should have edges numbered 1, 2, 3, and one of: <-1, -2, -3>, and up to two copies of each number
+    acceptable_numbers = [1, 1, 2, 2, 3, 3, -1, -1, -2, -2, -3, -3]
+    for testedge in singleton_tail_edges:
+        acceptable_numbers.remove(testedge.number)
+    assert len(acceptable_numbers) == 6 # Six total leftovers
+    assert len([x for x in acceptable_numbers if x < 0]) == 5 # 5 of which are negative
+    assert len([x for x in acceptable_numbers if x > 0]) == 1 # 1 positive leftover
+    
+    # The one positive and negative pair left over will not be used, but a new pair of 4, -4 will be for two components edges
+    leftover_value = [x for x in acceptable_numbers if x > 0][0]
+    acceptable_numbers.remove(leftover_value)
+    acceptable_numbers.remove(-leftover_value)
+    acceptable_numbers.extend([4, -4])
+    
+    # The two_comp states should have edges that use up the remaining negative numbers and the additional pair of 4, -4
+    for testedge in two_comp_tail_edges:
+        acceptable_numbers.remove(testedge.number)
+    assert len(acceptable_numbers) == 0
     
 # ------Tests for CountingSignature objects------
 
