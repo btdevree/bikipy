@@ -683,20 +683,39 @@ class Network(HasTraits):
     
         # Get the states as a list sorted by length of component lists
         state_list = sorted(self.main_graph.__iter__(), key = lambda x: len(x.required_drug_list) + len(x.required_protein_list))
+        
         # Number states
         for current_index, current_state in enumerate(state_list):
             current_state.number = current_index + 1 # Avoid using number 0, since a null state often has a specific meaning
         
         # Number edge ST objects via their connection to the states (so in general, low number edges on low number states)
-        current_number = 1 # Avoid using number 0, since a null state often has a specific meaning
         for current_state in state_list:
             
             # Find edges with current state as tail and visit each one
             edge_tuples = [x for x in self.main_graph.out_edges(current_state, 'reaction_type')]
             for current_edge_tuple in edge_tuples:
+                STobj = current_edge_tuple[2]
+                
+                # If edge is already numbered, go to the next edge
+                if STobj.number != None:
+                    continue
+                
+                # Otherwise, we need to give a new number out
+                new_number = self._get_next_edge_number()
                 
                 # Handle association rules
-                if isinstance(current_edge_tuple[2], A
+                if isinstance(STobj, Association):
+                    
+                    # Give new number as positive value
+                    STobj.number = new_number
+                    
+                    # Look for opposite dissociation rule
+                    #HOW TO DO THIS?
+                    
+                    
+                   
+                    
+                    # 
             #
             #HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!
             pass
@@ -705,7 +724,25 @@ class Network(HasTraits):
     def autovariable(self):
         pass
     
+    def _get_next_edge_number(self, graph = None):
+        # Helper function to see what the next availiable number in the graph is
         
+        # Work on main graph by default, but any graph can be given
+        if graph = None: 
+            graph = self.main_graph 
+            
+        # Make a list of the numbers already used - negative numbers for opposite reactions are converted to their positive counterpart
+        used_numbers = [abs(STobj.number) for (u, v, STobj) in graph.edges.data('reaction_type')]
+        
+        # Test for presence in the number list until an open value is found
+        test_number = 1 # Don't use 0, as null states have a specific meaning in chemical kinetics
+        while test_number in used_numbers:
+            test_number += 1
+        
+        # Give the number back, positive values only
+        return test_number
+
+
 class CountingSignature(HasTraits):
     # Used for storing information about the number of elements involved in state to state transistion reactions
     # Two use modes with 1st parameter "count_type":
