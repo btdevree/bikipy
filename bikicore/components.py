@@ -261,7 +261,7 @@ class StateTransition(HasTraits):
     #Superclass for all transition objects
     
     # Traits initialization
-    number = Int()
+    number = Int(None)
     variable = Instance(spBaseClass) # Must be a sympy object
     ID = Instance(uuid.UUID)
     
@@ -683,11 +683,11 @@ class Network(HasTraits):
     
         # Get the states as a list sorted by length of component lists
         state_list = sorted(self.main_graph.__iter__(), key = lambda x: len(x.required_drug_list) + len(x.required_protein_list))
-        
+       
         # Number states
         for current_index, current_state in enumerate(state_list):
             current_state.number = current_index + 1 # Avoid using number 0, since a null state often has a specific meaning
-        
+       
         # Number edge ST objects via their connection to the states (so in general, low number edges on low number states)
         for current_state in state_list:
             
@@ -695,6 +695,7 @@ class Network(HasTraits):
             edge_tuples = [x for x in self.main_graph.out_edges(current_state, 'reaction_type')]
             for current_edge_tuple in edge_tuples:
                 STobj = current_edge_tuple[2]
+                Reverse_STobj = None # Reset reverse
                 
                 # If edge is already numbered, go to the next edge
                 if STobj.number != None:
@@ -702,37 +703,80 @@ class Network(HasTraits):
                 
                 # Otherwise, we need to give a new number out
                 new_number = self._get_next_edge_number()
-                
+
+                # Look for opposite rule
+                try:
+                    Reverse_STobj = self.main_graph.edges[current_edge_tuple[1], current_edge_tuple[0]]['reaction_type']
+                except KeyError: # This is OK, there's just not an edge there
+                    assign_reverse = False 
+                else:
+                    if Reverse_STobj.number == None: # Only assign a new value if it's not already numbered
+                        assign_reverse = True
+                    else:
+                        assign_reverse = False
+  
                 # Handle association rules
                 if isinstance(STobj, Association):
                     
                     # Give new number as positive value
                     STobj.number = new_number
                     
-                    # Look for opposite dissociation rule
-                    #HOW TO DO THIS?
+                    # Give the opposite reaction the negative number, if needed
+                    if assign_reverse:
+                        Reverse_STobj.number = -new_number 
+                
+                # Handle dissociation rules
+                elif isinstance(STobj, Dissociation):
                     
+                    # Give new number as negative value
+                    STobj.number = -new_number
                     
-                   
+                    # Give the opposite reaction the positive number, if needed
+                    if assign_reverse:
+                        Reverse_STobj.number = new_number # Give the opposite reaction the negative number, if needed
+                
+                # Handle Conversion rules
+                elif isinstance(STobj, Conversion):
                     
-                    # 
-            #
-            #HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            pass
-
+                    # If this is the reference direction, positive numbers go forward
+                    if STobj.reference_direction:
+                        # Give new number as positive value
+                        STobj.number = new_number
+                    
+                        # Give the opposite reaction the negative number, if needed
+                        if assign_reverse:
+                            Reverse_STobj.number = -new_number
+                    
+                    # If this is not the reference direction, negative numbers go forward
+                    else: 
+                        # Give new number as negative value
+                        STobj.number = -new_number
+                    
+                        # Give the opposite reaction the positive number, if needed
+                        if assign_reverse:
+                            Reverse_STobj.number = new_number
     
     def autovariable(self):
-        pass
+        # Give each state and edge state-transition object in the main graph a variable
+        # Call after numbering
+        
+        # Call autovairable on each state
+        for current_state in self.main_graph:
+            current_state.autovariable()
+            
+        # Call autovairable on each edge 
+        for u, v, STobj in self.main_graph.edges.data('reaction_type'):
+            STobj.autovariable() 
     
     def _get_next_edge_number(self, graph = None):
         # Helper function to see what the next availiable number in the graph is
         
         # Work on main graph by default, but any graph can be given
-        if graph = None: 
+        if graph == None: 
             graph = self.main_graph 
             
         # Make a list of the numbers already used - negative numbers for opposite reactions are converted to their positive counterpart
-        used_numbers = [abs(STobj.number) for (u, v, STobj) in graph.edges.data('reaction_type')]
+        used_numbers = [abs(STobj.number) for (u, v, STobj) in graph.edges.data('reaction_type') if STobj.number != None]
         
         # Test for presence in the number list until an open value is found
         test_number = 1 # Don't use 0, as null states have a specific meaning in chemical kinetics

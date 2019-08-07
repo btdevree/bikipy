@@ -2,6 +2,7 @@
 
 """
 import pytest
+import sympy as sp
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
@@ -1043,8 +1044,8 @@ def test_Network_autonumber_edge(default_two_state_antagonist_model_with_main_gr
     singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
     two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
     
-    singleton_tail_edges = [x for u, v, x in dam.network.main_graph.edges('reaction_type') if u in singletons]
-    two_comp_tail_edges = [x for u, v, x in dam.network.main_graph.edges('reaction_type') if u in two_components]
+    singleton_tail_edges = [x for u, v, x in dam.network.main_graph.edges.data('reaction_type') if u in singletons]
+    two_comp_tail_edges = [x for u, v, x in dam.network.main_graph.edges.data('reaction_type') if u in two_components]
     
     # The singleton states should have edges numbered 1, 2, 3, and one of: <-1, -2, -3>, and up to two copies of each number
     acceptable_numbers = [1, 1, 2, 2, 3, 3, -1, -1, -2, -2, -3, -3]
@@ -1059,12 +1060,61 @@ def test_Network_autonumber_edge(default_two_state_antagonist_model_with_main_gr
     acceptable_numbers.remove(leftover_value)
     acceptable_numbers.remove(-leftover_value)
     acceptable_numbers.extend([4, -4])
-    
+
     # The two_comp states should have edges that use up the remaining negative numbers and the additional pair of 4, -4
     for testedge in two_comp_tail_edges:
         acceptable_numbers.remove(testedge.number)
     assert len(acceptable_numbers) == 0
     
+# Test for autovariable function on nodes
+def test_Network_autovariable_node(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Call autonumber using the main graph on the model
+    dam.network.autovariable()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    # The singleton states should be S1, S2, and S3. Should add comparision operators to states so they can be sorted better, but for now we sort by component length only
+    acceptable_vars = [*sp.symbol('S_1, S_2, S_3')] # we should be able to consume this without error
+    for teststate in singletons:
+        acceptable_vars.remove(teststate.variable)
+    assert len(acceptable_vars) == 0
+    
+    # The two-component states should be S4 and S5. 
+    acceptable_vars = [*sp.symbol('S_4, S_5')] # we should be able to consume this without error
+    for teststate in two_components:
+        acceptable_vars.remove(teststate.variable)
+    assert len(acceptable_vars) == 0
+
+# Test for autovariable function on edges
+def test_Network_autovariable_edge(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Call autonumber using the main graph on the model
+    dam.network.autovariable()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    singleton_tail_edges = [x for u, v, x in dam.network.main_graph.edges.data('reaction_type') if u in singletons]
+    two_comp_tail_edges = [x for u, v, x in dam.network.main_graph.edges.data('reaction_type') if u in two_components]
+    
+    # The singleton states should have edges with variables k1, k2, k3, and k-3 - I am pretty sure the example network must always be in this order, but check order if it fails
+    acceptable_vars = [*sp.symbol('k_1, k_1, k_2, k_2, k_3, k_-3')]
+    for testedge in singleton_tail_edges:
+        acceptable_vars.remove(testedge.variable)
+    assert len(acceptable_vars) == 0
+    
+    # Edges coming from two-component states should be k-1, k-2, k3, k-3, k4, and k-4
+    acceptable_vars = [*sp.symbol('k_-1, k_-1, k_-2, k_-2, k_3, k_-3, k_4, k_-4')]
+    for testedge in two_comp_tail_edges:
+        acceptable_vars.remove(testedge.variable)
+    assert len(acceptable_vars) == 0
+
 # ------Tests for CountingSignature objects------
 
 
