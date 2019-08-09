@@ -1009,7 +1009,30 @@ def test_Network_has_main_graph(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph')
 def test_Network_has_main_blacklist(default_Network_instance):
     assert hasattr(default_Network_instance, 'main_graph_blacklist')
+
+# Test for autosymbol function on nodes
+def test_Network_autosymbol_node(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
     
+    # Call autosymbol using the main graph on the model
+    dam.network.autosymbol()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    # The singleton states should be 1, 2, and 3. Should add comparision operators to states so they can be sorted better, but for now we sort by component length only
+    acceptable_symbols = ['A', 'R', 'R*'] # we should be able to consume this without error
+    for teststate in singletons:
+        acceptable_symbols.remove(teststate.symbol)
+    assert len(acceptable_symbols) == 0
+    
+    # The two component states should be 4 and 5. 
+    acceptable_symbols = ['AR', 'AR*'] # we should be able to consume this without error
+    for teststate in two_components:
+        acceptable_symbols.remove(teststate.symbol)
+    assert len(acceptable_symbols) == 0
+
 # Test for autonumber function on nodes
 def test_Network_autonumber_node(default_two_state_antagonist_model_with_main_graph):
     dam = default_two_state_antagonist_model_with_main_graph
@@ -1070,7 +1093,8 @@ def test_Network_autonumber_edge(default_two_state_antagonist_model_with_main_gr
 def test_Network_autovariable_node(default_two_state_antagonist_model_with_main_graph):
     dam = default_two_state_antagonist_model_with_main_graph
     
-    # Call autonumber using the main graph on the model
+    # Call autovariable using the main graph on the model, must have numbered graphs
+    dam.network.autonumber()
     dam.network.autovariable()
     
     # Sort results
@@ -1078,13 +1102,13 @@ def test_Network_autovariable_node(default_two_state_antagonist_model_with_main_
     two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
     
     # The singleton states should be S1, S2, and S3. Should add comparision operators to states so they can be sorted better, but for now we sort by component length only
-    acceptable_vars = [*sp.symbol('S_1, S_2, S_3')] # we should be able to consume this without error
+    acceptable_vars = [*sp.symbols('S_1, S_2, S_3')] # we should be able to consume this without error
     for teststate in singletons:
         acceptable_vars.remove(teststate.variable)
     assert len(acceptable_vars) == 0
     
     # The two-component states should be S4 and S5. 
-    acceptable_vars = [*sp.symbol('S_4, S_5')] # we should be able to consume this without error
+    acceptable_vars = [*sp.symbols('S_4, S_5')] # we should be able to consume this without error
     for teststate in two_components:
         acceptable_vars.remove(teststate.variable)
     assert len(acceptable_vars) == 0
@@ -1093,7 +1117,8 @@ def test_Network_autovariable_node(default_two_state_antagonist_model_with_main_
 def test_Network_autovariable_edge(default_two_state_antagonist_model_with_main_graph):
     dam = default_two_state_antagonist_model_with_main_graph
     
-    # Call autonumber using the main graph on the model
+     # Call autovariable using the main graph on the model, must have numbered graphs
+    dam.network.autonumber()
     dam.network.autovariable()
     
     # Sort results
@@ -1104,17 +1129,43 @@ def test_Network_autovariable_edge(default_two_state_antagonist_model_with_main_
     two_comp_tail_edges = [x for u, v, x in dam.network.main_graph.edges.data('reaction_type') if u in two_components]
     
     # The singleton states should have edges with variables k1, k2, k3, and k-3 - I am pretty sure the example network must always be in this order, but check order if it fails
-    acceptable_vars = [*sp.symbol('k_1, k_1, k_2, k_2, k_3, k_-3')]
+    acceptable_vars = [*sp.symbols('k_1, k_1, k_2, k_2, k_3, k_-3')]
     for testedge in singleton_tail_edges:
+        print(testedge, testedge.variable)
         acceptable_vars.remove(testedge.variable)
     assert len(acceptable_vars) == 0
     
     # Edges coming from two-component states should be k-1, k-2, k3, k-3, k4, and k-4
-    acceptable_vars = [*sp.symbol('k_-1, k_-1, k_-2, k_-2, k_3, k_-3, k_4, k_-4')]
+    acceptable_vars = [*sp.symbols('k_-1, k_-1, k_-2, k_-2, k_4, k_-4')]
     for testedge in two_comp_tail_edges:
         acceptable_vars.remove(testedge.variable)
     assert len(acceptable_vars) == 0
-
+    
+# Test for autoname function on nodes
+def test_Network_autoname_node(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Call autoname using the main graph on the model, must have numbered graphs
+    dam.network.autonumber()
+    dam.network.autoname()
+    
+    # Sort results
+    singletons = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 1]
+    two_components = [x for x in dam.network.main_graph.__iter__() if len(x.required_drug_list) + len(x.required_protein_list) == 2]
+    
+    # The singleton states should be S1, S2, and S3. Should add comparision operators to states so they can be sorted better, but for now we sort by component length only
+    acceptable_names = ['State 1', 'State 2', 'State 3'] # we should be able to consume this without error
+    for teststate in singletons:
+        acceptable_names.remove(teststate.name)
+    assert len(acceptable_names) == 0
+    
+    # The two-component states should be S4 and S5. 
+    acceptable_names = ['State 4', 'State 5'] # we should be able to consume this without error
+    for teststate in two_components:
+        acceptable_names.remove(teststate.name)
+    assert len(acceptable_names) == 0
+    
+    
 # ------Tests for CountingSignature objects------
 
 

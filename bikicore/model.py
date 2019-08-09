@@ -75,6 +75,12 @@ class Model(HasTraits):
                 current_cycle_number += 1
 #                self._main_graph_dump('Graph_' + str(current_cycle_number))
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
+                
+        # Now run the automatic labeling methods - States get all these things, edges get a number and variable
+        self.network.autosymbol()
+        self.network.autonumber()
+        self.network.autoname()
+        self.network.autovariable()
         
     def apply_rules_to_network(self, graph = None):
         # Apply the model's rules to an existing graph

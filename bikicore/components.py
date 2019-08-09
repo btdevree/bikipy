@@ -179,12 +179,19 @@ class State(HasTraits):
         # End Method 0
     
     def autoname(self):
-        pass
-    def autonumber(self, main_graph):
-        pass
-    def autovariable(self, main_graph):
-        pass
+        # Creates an automated name for state
+        # Run after numbering
+               
+        self.name = 'State {}'.format(self.number)
     
+    def autovariable(self):
+        # Creates a sympy symbol object that represents the state's concentration in rate equations. 
+        # Call after numbering by the network function.
+        # NOTE: we call the sympy symbol a "variable", and the single-letter notation for chemical components a
+        #   "symbol", in line with usage in basic algebra and chemistry language. Sorry, symbolic mathmatics.
+        
+        self.variable = sp.symbols('S_{}'.format(self.number))
+            
     def generate_component_list(self, return_components_only = False):
         # Returns a list of components and a list of conformations
         # The list is ordered all drugs first, then proteins
@@ -261,6 +268,7 @@ class StateTransition(HasTraits):
     #Superclass for all transition objects
     
     # Traits initialization
+    name = Str()
     number = Int(None)
     variable = Instance(spBaseClass) # Must be a sympy object
     ID = Instance(uuid.UUID)
@@ -268,12 +276,19 @@ class StateTransition(HasTraits):
      # Want to give a new state an ID right away, determined by the network generation code
     def __init__(self, *args, **kwargs):
         self.ID = uuid.uuid4()
-        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
+        super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
+        
+    def autovariable(self):
+        # Creates a sympy symbol object that represents the edges's rate constant in rate equations. 
+        # Call after numbering by the network function.
+        # NOTE: we call the sympy symbol a "variable", and the single-letter notation for chemical components a
+        #   "symbol", in line with usage in basic algebra and chemistry language. Sorry, symbolic mathmatics.
+        
+        self.variable = sp.symbols('k_{}'.format(self.number))
     
 class Conversion(StateTransition):
     
     # Traits initialization
-    name = Str('conversion')
     reference_direction = Bool()
     
     # Keep track of the original conversion direction for better numbering
@@ -281,49 +296,21 @@ class Conversion(StateTransition):
         self.reference_direction = reference_direction
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery 
     
-    def autonumber(self, main_graph):
-        pass
-    
 class Association(StateTransition):
+    pass
     
-    # Traits initialization
-    name = Str('association')
-    
-    def autonumber(self, main_graph):
-        pass
-
 class Dissociation(StateTransition):
-    
-    # Traits initialization
-    name = Str('dissociation')
-    
-    def autonumber(self, main_graph):
-        pass 
+    pass
 
 class RE_Conversion(StateTransition):
-    
-    # Traits initialization
-    name = Str('RE conversion')    
-    
-    def autonumber(self, main_graph):
-        pass
-
+    pass
+   
 class RE_Dissociation(StateTransition):
-    
-    # Traits initialization
-    name = Str('RE dissociation')
-    
-    def autonumber(self, main_graph):
-        pass
+    pass
 
 class RE_Association(StateTransition):
+    pass
     
-    # Traits initialization
-    name = Str('RE association')
-    
-    def autonumber(self, main_graph):
-        pass
-
 # Define class for the rules used to build the network graph
 class Rule(HasTraits):
     # Rules must be created with a reference to the model they belong to, and 
@@ -677,6 +664,13 @@ class Network(HasTraits):
         self.display_graphs = []
         self.solving_graphs = []
         
+    def autosymbol(self):
+        # Give each state in the main graph a symbol
+        
+        # Call autosymbol on each state
+        for current_state in self.main_graph:
+            current_state.autosymbol()
+         
     def autonumber(self):
         # Give each state and edge state-transition object in the main graph a number
         # Sort states/edges by length for numbering, but no more organization than that
@@ -760,13 +754,21 @@ class Network(HasTraits):
         # Give each state and edge state-transition object in the main graph a variable
         # Call after numbering
         
-        # Call autovairable on each state
+        # Call autovariable on each state
         for current_state in self.main_graph:
             current_state.autovariable()
             
         # Call autovairable on each edge 
         for u, v, STobj in self.main_graph.edges.data('reaction_type'):
             STobj.autovariable() 
+    
+    def autoname(self):
+        # Give each state in the main graph a variable
+        # Call after numbering
+        
+        # Call autoname on each state
+        for current_state in self.main_graph:
+            current_state.autoname()
     
     def _get_next_edge_number(self, graph = None):
         # Helper function to see what the next availiable number in the graph is
