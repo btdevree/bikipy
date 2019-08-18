@@ -33,10 +33,6 @@ class Model(HasTraits):
         self.protein_list = []
         self.rule_list = []
     
-    def _copy_from(self, model_to_copy):
-        # Code to duplicate the structure of a model with new objects
-        pass           
-    
     def generate_network(self, max_cycles=20):
         # Create a new network graph of the model by using the list of rules. 
         
@@ -192,6 +188,9 @@ class Model(HasTraits):
             
             else:
                 raise ValueError("Rule not recognized")
+    
+    def reduce_graph(self, name, included_components = 'all', excluded_components = [], pseudo_1st_order_components = []):
+        pass
     
     def _find_states_that_match_rule(self, rule, what_to_find):
         # Helper function that looks through a graph and returns lists states that include a rule's required components
@@ -1157,6 +1156,11 @@ class Model(HasTraits):
         G = self.network.main_graph
         nx.draw(G, with_labels=True, font_weight='bold')
         plt.savefig(label+'.png')
+        
+    def _copy_model_from(self, model_to_copy):
+        # Code to duplicate the structure of a model with new objects
+        pass           
+    
         
 # Model creation method
 def create_new_model(new_model_type, model_list, model_to_copy = None):

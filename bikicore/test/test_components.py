@@ -3,6 +3,7 @@
 """
 import pytest
 import sympy as sp
+import networkx as nx
 import bikipy.bikicore.components as bkcc
 import bikipy.bikicore.model as bkcm
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
@@ -1164,8 +1165,18 @@ def test_Network_autoname_node(default_two_state_antagonist_model_with_main_grap
     for teststate in two_components:
         acceptable_names.remove(teststate.name)
     assert len(acceptable_names) == 0
+
+# Test for duplicaiton function
+def test_Network_duplicate_graph_from_main(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
     
+    # Make the copy
+    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
     
+    # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
+    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derivitive_graphs['testgraph'])
+    assert len(dam.network.derivitive_graph_correlates['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+
 # ------Tests for CountingSignature objects------
 
 

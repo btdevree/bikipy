@@ -5,11 +5,12 @@ biochemical system, the model, and the experiments performed.
 
 import uuid
 import itertools
+import copy
 import networkx as nx
 import sympy as sp
 from sympy.core.basic import Basic as spBaseClass 
 from collections import Counter
-from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either, Bool
+from traits.api import HasTraits, Str, List, Tuple, Int, Instance, Enum, Either, Bool, Dict
 from bikipy.bikicore.exceptions import ComponentNotValidError, RuleNotValidError
 
 # Define classes for the different components of the biochemical system
@@ -654,15 +655,15 @@ class Network(HasTraits):
     # Traits initialization
     main_graph = Instance(nx.DiGraph)
     main_graph_blacklist = List(Instance(State))
-    display_graphs = List(Instance(nx.DiGraph))
-    solving_graphs = List(Instance(nx.DiGraph))
+    derived_graphs = Dict(key_trait = Str(), value_trait = Instance(nx.DiGraph))
+    derived_graph_correlate_states = Dict(key_trait = Str(), value_trait = List(Tuple(Instance(State), Instance(State))))
+    derived_graph_correlate_STobjs = Dict(key_trait = Str(), value_trait = List(Tuple(Instance(StateTransition), Instance(StateTransition))))
     
     # Initial network is an empty main_graph and empty lists of derivitive graphs
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs) # Make sure to call the HasTraits initialization machinery
         self.main_graph = nx.DiGraph()
-        self.display_graphs = []
-        self.solving_graphs = []
+        self.derived_graphs = {}
         
     def autosymbol(self):
         # Give each state in the main graph a symbol
@@ -769,6 +770,71 @@ class Network(HasTraits):
         # Call autoname on each state
         for current_state in self.main_graph:
             current_state.autoname()
+    
+    def duplicate_graph(self, name, source_graph_name = None):
+        # Function to copy the a graph in the model
+        # Parameters:
+            # name - string, serves as the key for the dictionary of derived graphs
+            # source_graph - string or None, name of graph to be copied. None is default and is the main graph, but any derived graph can be copied.
+            
+        # Find the source graph and throw approprate errors if needed
+        if source_graph_name == None:
+            source_graph = self.main_graph
+        elif isinstance(source_graph_name, str):
+            try:
+                source_graph = self.derived_graphs[source_graph_name]
+            except KeyError as err:
+                raise ValueError('Given value for source_graph_name not found in derived_graph list.') from err
+        else:
+            raise ValueError('Given value for source_graph_name not recognized.')
+            
+        # Make a new independent shallow copy of the graph
+        new_graph = source_graph.copy()
+        
+        # For each state, we want to make a new state with the same information, but different ID (and memory address)
+        # We also set all the references in the new graph to the new state and write down correlated states in the list
+        
+        # Make required changes to each old and new states one-by-one
+        new_state_correlate_list = []
+        for current_source_state in source_graph:
+            
+            # Make shallow copy of state object (keep references to model-wide components, rules, etc.) and get new ID
+            new_state = copy.copy(current_source_state)
+            new_state.ID = uuid.uuid4()
+            
+            # Add to correlate list
+            new_state_correlate_list.append((current_source_state, new_state))
+            
+            # Change the new graph references NOTE:DOES THIS WORK??
+            for current_new_state in new_graph:
+                if current_new_state == current_source_state:
+                    current_new_state = new_state
+        
+        # Make required changes to each old and new states one-by-one
+        new_STobj_correlate_list = []
+        for u, v, current_source_STobj in source_graph.edges.data('reaction_type'):
+            
+            # Make shallow copy of state object (keep references to model-wide components, rules, etc.) and get new ID
+            new_STobj = copy.copy(current_source_STobj)
+            new_STobj.ID = uuid.uuid4()
+            
+            # Add to correlate list
+            new_STobj_correlate_list.append((current_source_STobj, new_STobj))
+            
+            # Change the new graph references 
+            for current_new_STobj in new_graph:
+                if current_new_STobj == current_source_STobj:
+                    current_new_STobj = new_STobj
+            
+            
+                    
+            
+            print(current_source_state, current_source_state.ID, current_new_state, current_new_state.ID)
+            
+        print(*new_graph)
+        print(*source_graph)
+        print(*new_graph.edges.data('reaction_type'))
+        print(*source_graph.edges.data('reaction_type'))
     
     def _get_next_edge_number(self, graph = None):
         # Helper function to see what the next availiable number in the graph is
