@@ -805,16 +805,16 @@ class Network(HasTraits):
             # Add to correlate list
             new_state_correlate_list.append((current_source_state, new_state))
             
-            # Change the new graph references NOTE:DOES THIS WORK??
+            # Change the new graph references
             for current_new_state in new_graph:
                 if current_new_state == current_source_state:
                     current_new_state = new_state
         
-        # Make required changes to each old and new states one-by-one
+        # Make required changes to each old and new STObj one-by-one
         new_STobj_correlate_list = []
         for u, v, current_source_STobj in source_graph.edges.data('reaction_type'):
             
-            # Make shallow copy of state object (keep references to model-wide components, rules, etc.) and get new ID
+            # Make shallow copy of STObj object (keep references to model-wide components, rules, etc.) and get new ID
             new_STobj = copy.copy(current_source_STobj)
             new_STobj.ID = uuid.uuid4()
             
@@ -825,16 +825,11 @@ class Network(HasTraits):
             for current_new_STobj in new_graph:
                 if current_new_STobj == current_source_STobj:
                     current_new_STobj = new_STobj
-            
-            
-                    
-            
-            print(current_source_state, current_source_state.ID, current_new_state, current_new_state.ID)
-            
-        print(*new_graph)
-        print(*source_graph)
-        print(*new_graph.edges.data('reaction_type'))
-        print(*source_graph.edges.data('reaction_type'))
+        
+        # Assign new graph to derivitive graphs
+        self.derived_graphs[name] = new_graph
+        self.derived_graph_correlate_states[name] = new_state_correlate_list
+        self.derived_graph_correlate_STobjs[name] = new_STobj_correlate_list
     
     def _get_next_edge_number(self, graph = None):
         # Helper function to see what the next availiable number in the graph is

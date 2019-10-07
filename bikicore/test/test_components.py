@@ -1174,8 +1174,51 @@ def test_Network_duplicate_graph_from_main(default_two_state_antagonist_model_wi
     dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
     
     # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
-    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derivitive_graphs['testgraph'])
-    assert len(dam.network.derivitive_graph_correlates['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
+    assert len(dam.network.derived_graph_correlate_states['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+    assert len(dam.network.derived_graph_correlate_STobjs['testgraph']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
+
+# Test for duplicaiton function
+def test_Network_duplicate_graph_from_other(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Make a copy
+    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
+    
+    # Make a copy of a copy
+    dam.network.duplicate_graph('testgraph2', source_graph_name = 'testgraph') 
+    
+    # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
+    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.derived_graphs['testgraph2'], dam.network.derived_graphs['testgraph'])
+   
+# Test if the correlate lists are correct for a main graph derivitive
+def test_Network_duplicate_correlates_from_main(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Make the copy
+    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
+    
+    # Test for a correct length
+    assert len(dam.network.derived_graph_correlate_states['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+    assert len(dam.network.derived_graph_correlate_STobjs['testgraph']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
+    
+    # Would like more extensive tests here...
+
+# Test if the correlate lists are correct for a main graph derivitive
+def test_Network_duplicate_correlates_from_other(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Make the copy
+    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
+    
+    # Make a copy of a copy
+    dam.network.duplicate_graph('testgraph2', source_graph_name = 'testgraph') 
+    
+    # Test for a correct length
+    assert len(dam.network.derived_graph_correlate_states['testgraph2']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+    assert len(dam.network.derived_graph_correlate_STobjs['testgraph2']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
+    
+    # Would like more extensive tests here...
 
 # ------Tests for CountingSignature objects------
 
