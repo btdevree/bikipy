@@ -57,6 +57,7 @@ class Model(HasTraits):
         # After creating the singleton graph, reapply the network rules until no more changes happen
         old_network = self.network.main_graph.copy()
         current_cycle_number = 0
+        self._fancy_main_graph_draw('singleton_start_graph', True)
         while current_cycle_number <= max_cycles:
             self.apply_rules_to_network()
 #            self._main_graph_dump('Graph_0')
@@ -65,10 +66,12 @@ class Model(HasTraits):
             if nx.algorithms.isomorphism.is_isomorphic(old_network, self.network.main_graph):
 #                self._main_graph_dump('Final_graph')
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
+                self._fancy_main_graph_draw('last_graph', True)
                 break
             else:
                 old_network = self.network.main_graph.copy()
                 current_cycle_number += 1
+                self._fancy_main_graph_draw('intermediate_graph{}'.format(current_cycle_number), True)
 #                self._main_graph_dump('Graph_' + str(current_cycle_number))
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
                 
@@ -95,19 +98,21 @@ class Model(HasTraits):
             if current_rule.rule == ' associates with ' or current_rule.rule == ' reversibly associates with ' \
                     or current_rule.rule == ' associates and dissociates in rapid equlibrium with ':
                 
+                #print(str(current_rule.rule_subject),',', str(current_rule.subject_conf), str(current_rule.rule), str(current_rule.rule_object),',', str(current_rule.object_conf))
                 # Get a list of accecptable signatures for the rule and read which type of signature we need
                 reference_signatures = current_rule.generate_signature_list()
                 
                 # Find states that fit the rule description
                 matching_subject_states = self._find_states_that_match_rule(current_rule, 'subject')
                 matching_object_states = self._find_states_that_match_rule(current_rule, 'object')
-                
+                #print('subject_matches: ', matching_subject_states)
+                #print('object_matches: ', matching_object_states)
                 # Find the possible pairings of subject and object states that create valid signatures
                 possible_state_tuple_list = self._find_association_pairs(reference_signatures, matching_subject_states, matching_object_states)
-                
+                #print('possible tuples: ', possible_state_tuple_list)
                 # Test if the a pair of states could create the implied internal structure required by the rule
                 valid_state_tuple_list, valid_link_list = self._find_association_internal_link(current_rule, possible_state_tuple_list)
-                
+                #print('valid states: ', valid_state_tuple_list, valid_link_list)
                 # Associate any valid pairs of states 
                 for current_state_tuple, current_link_tuple in zip(valid_state_tuple_list, valid_link_list):
                     if current_rule.rule == ' associates with ':
@@ -199,7 +204,7 @@ class Model(HasTraits):
         # Get the components and conformations that we are looking for
         # Note that any proteins with a [] conformation will always be last in the list
         rule_components, rule_conformations = rule.generate_component_list(what_to_find)
-        
+        print(rule, what_to_find, rule_components, rule_conformations)
         # Iterate through all the graph's states and add them to the lists if they match
         matching_states = []
         for current_state in self.network.main_graph.__iter__():
@@ -217,20 +222,21 @@ class Model(HasTraits):
         #   match = 'minimal': returns true if the query state contains all the reference components, but may have additional ones as well
         
         # NOTE: The link checking won't work properly with "any" ([]) conformation - Try to fix design in the future
-        
+      
         # Get the link list that the state requires
         remaining_links = query_state.internal_links.copy()
+        query_comp_list, query_conf_list = query_state.generate_component_list()
         
         # Loop through all remaining links for each query link
         for current_link_element1, current_link_element2 in reference_link_list: 
             for i, current_query_links in enumerate(remaining_links):
-                
+
                 # Ask if the query and reference in the normal order match
                 found_match = False
-                if self._compare_components_linked_tuple_element(current_query_links, (current_link_element1, current_link_element2), reference_component_list, reference_conformation_list):
+                if self._compare_components_linked_tuple_element(current_query_links, (current_link_element1, current_link_element2), reference_component_list, reference_conformation_list, query_component_list=query_comp_list, query_conformation_list=query_conf_list):
                     found_match = True
                 # Ask if the query and reference in the reversed order match
-                elif self._compare_components_linked_tuple_element(current_query_links, (current_link_element2, current_link_element1), reference_component_list, reference_conformation_list):
+                elif self._compare_components_linked_tuple_element(current_query_links, (current_link_element2, current_link_element1), reference_component_list, reference_conformation_list, query_component_list=query_comp_list, query_conformation_list=query_conf_list):
                     found_match = True
                 
                 #Consume the reference match
@@ -244,7 +250,7 @@ class Model(HasTraits):
 
         # Get the components and conformations that the state requires
         query_component_list, query_conformation_list = query_state.generate_component_list()
-        
+
         # Run the comparison
         component_boolean = self._compare_component_lists(query_component_list, query_conformation_list, reference_component_list, reference_conformation_list, match)
         
@@ -757,24 +763,31 @@ class Model(HasTraits):
         protein_list.extend([x for x in list1 + list2 if isinstance(x, bkcc.Protein)])
         return drug_list + protein_list
     
-    def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, component_list, conformation_list = []):
+    def _compare_components_linked_tuple_element(self, query_tuple_element, reference_tuple_element, ref_component_list, ref_conformation_list = [], query_component_list = None, query_conformation_list = None):
         # Generator expression to compare complex tuple trees by referenced component
         
         # NOTE: conformation testing would not work as intended with the "any" ([]) conformation - fix in future redesign
+        # Modify to accecpt two different component/conformations lists. This really needs to be redesigned.
+
         
+        if query_component_list == None:
+            query_component_list = ref_component_list
+        if query_conformation_list == None:
+            query_conformation_list = ref_conformation_list
+            
         # Recursive testing if we have matching tuples instead of a single index value
         if  isinstance(query_tuple_element, tuple) and isinstance(reference_tuple_element, tuple) and len(query_tuple_element) == len(reference_tuple_element):
-            if conformation_list == []: # No conformations
-                return all(self._compare_components_linked_tuple_element(*elements, component_list) for elements in zip(query_tuple_element, reference_tuple_element))
+            if ref_conformation_list == []: # No conformations
+                return all(self._compare_components_linked_tuple_element(*elements, ref_component_list, query_component_list=query_component_list) for elements in zip(query_tuple_element, reference_tuple_element))
             else:
-                return all(self._compare_components_linked_tuple_element(*elements, component_list, conformation_list) for elements in zip(query_tuple_element, reference_tuple_element))
+                return all(self._compare_components_linked_tuple_element(*elements, ref_component_list, ref_conformation_list, query_component_list=query_component_list, query_conformation_list=query_conformation_list) for elements in zip(query_tuple_element, reference_tuple_element))
         
         # If we have a single index value, test if they match
         elif isinstance(query_tuple_element, int) and isinstance(reference_tuple_element, int):
-            if conformation_list == []: # No conformations
-                return component_list[query_tuple_element] == component_list[reference_tuple_element]
+            if ref_conformation_list == []: # No conformations
+                return query_component_list[query_tuple_element] == ref_component_list[reference_tuple_element]
             else:
-                return component_list[query_tuple_element] == component_list[reference_tuple_element] and conformation_list[query_tuple_element] == conformation_list[reference_tuple_element]
+                return query_component_list[query_tuple_element] == ref_component_list[reference_tuple_element] and query_conformation_list[query_tuple_element] == ref_conformation_list[reference_tuple_element]
         
         # If neither are true, we are by definition a mismatch
         else:
@@ -1149,6 +1162,44 @@ class Model(HasTraits):
         
         # Give back the list of states that should be removed
         return valid_competing_states
+        
+    # Graphing
+    def _fancy_main_graph_draw(self, label='default', ID_labels=False):
+        plt.cla()
+        plt.figure(figsize=(16, 12)) 
+        # Get graph
+        G = self.network.main_graph
+        
+        # Calculate positions
+        #pos = nx.spring_layout(G)  # positions for all nodes
+        #pos = nx.shell_layout(G)  # positions for all nodes
+        pos = nx.kamada_kawai_layout(G)  # positions for all nodes
+        if ID_labels:
+            node_labels = {node:str(node.ID)[-4:] for node in G}
+        else:
+            node_labels = {node:r'$'+node.symbol+'$' for node in G}
+
+       # edge_labels = ["r'$"+str(edge.variable)+"$'" for u,v,edge in G.edges.data('reaction_type')]
+        
+        # Draw the peices
+        nx.draw_networkx_nodes(G, pos)
+        nx.draw_networkx_edges(G, pos)
+        
+        
+#        # some math labels
+#        labels = {}
+#        labels[0] = r'$a$'
+#        labels[1] = r'$b$'
+#        labels[2] = r'$c$'
+#        labels[3] = r'$d$'
+#        labels[4] = r'$\alpha$'
+#        labels[5] = r'$\beta$'
+#        labels[6] = r'$\gamma$'
+#        labels[7] = r'$\delta$'
+        nx.draw_networkx_labels(G, pos, node_labels, font_size=6)
+        
+        plt.savefig(label+'.png', dpi=500)
+        plt.close()
     
     # Graphing utility function
     def _main_graph_dump(self, label='default'):

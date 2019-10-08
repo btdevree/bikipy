@@ -821,7 +821,61 @@ def test7_find_states_that_match_rule(model_for_matching_tests):
     # Check output, no states should be found
     assert subject_list == []
     assert object_list == []
+
+# Both R(0) and R(1) should be returned as objects from rule matching "[]"
+def test8_find_states_that_match_rule(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = []
+    s1.required_protein_list = [mmt.protein_list[0]]
+    s1.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s1)
     
+    # Setup test network
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[1]]
+    mmt.network.main_graph.add_node(s2)
+    
+    mmt.rule_list[0].object_conf = [[0], [1]]
+    
+    # Run method
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
+    
+    # Check output
+    assert subject_list == []
+    assert object_list == [s1, s2]
+    
+# Both R(0) and R(1) should be returned as objects from rule matching ([0], [1])
+def test9_find_states_that_match_rule(model_for_matching_tests):
+    mmt = model_for_matching_tests
+        
+    # Setup test network
+    s1 = bkcc.State()
+    s1.required_drug_list = []
+    s1.required_protein_list = [mmt.protein_list[0]]
+    s1.req_protein_conf_lists = [[0]]
+    mmt.network.main_graph.add_node(s1)
+    
+    # Setup test network
+    s2 = bkcc.State()
+    s2.required_drug_list = []
+    s2.required_protein_list = [mmt.protein_list[0]]
+    s2.req_protein_conf_lists = [[1]]
+    mmt.network.main_graph.add_node(s2)
+    
+    # Run method
+    subject_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'subject')
+    object_list = mmt._find_states_that_match_rule(mmt.rule_list[0], 'object')
+    
+    # Check output
+    assert subject_list == []
+    assert object_list == [s1, s2]
+
 # Test that we return valid state pairs with a simple signature
 def test_find_association_pairs(model_for_matching_tests, default_Protein_instance, default_Drug_instance):
     mmt = model_for_matching_tests    
