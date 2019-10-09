@@ -395,7 +395,7 @@ class Rule(HasTraits):
                 raise RuleNotValidError('Dissociation rules require that the components in the subject state be fully included in the object state')
     
     # Method returns the components involved in the rule as a standardized list
-    def generate_component_lists(self, what_to_include = 'both'):
+    def generate_component_list(self, what_to_include = 'both'):
         # Returns a list with 2-tuples containing a list of components and a list of conformations
         # The list is ordered all drugs first, then proteins with specific conformations, then proteins with any conformation allowed
         # what_to_include = 'subject', 'object', or 'both'
@@ -436,9 +436,6 @@ class Rule(HasTraits):
         # Add all parts back together and return
         component_sorted = [*drug_comp_part, *protein_comp_part, *protein_comp_backpart]
         conformation_sorted = [*drug_conf_part, *protein_conf_part, *protein_conf_backpart]
-        
-        # Make copies with only one conformation choice per component !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
         return component_sorted, conformation_sorted
     
     # Method returns tuples of signatures with all possibilites of the appropreate components/conformations

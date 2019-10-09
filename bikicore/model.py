@@ -33,7 +33,7 @@ class Model(HasTraits):
         self.protein_list = []
         self.rule_list = []
     
-    def generate_network(self, max_cycles=20):
+    def generate_network(self, max_cycles=20, save_graphs=False):
         # Create a new network graph of the model by using the list of rules. 
         
         # Create a new Network object
@@ -57,7 +57,8 @@ class Model(HasTraits):
         # After creating the singleton graph, reapply the network rules until no more changes happen
         old_network = self.network.main_graph.copy()
         current_cycle_number = 0
-        self._fancy_main_graph_draw('singleton_start_graph', True)
+        if save_graphs: 
+            self._fancy_main_graph_draw('singleton_start_graph', True)
         while current_cycle_number <= max_cycles:
             self.apply_rules_to_network()
 #            self._main_graph_dump('Graph_0')
@@ -66,12 +67,14 @@ class Model(HasTraits):
             if nx.algorithms.isomorphism.is_isomorphic(old_network, self.network.main_graph):
 #                self._main_graph_dump('Final_graph')
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
-                self._fancy_main_graph_draw('last_graph', True)
+                if save_graphs: 
+                    self._fancy_main_graph_draw('last_graph', True)
                 break
             else:
                 old_network = self.network.main_graph.copy()
                 current_cycle_number += 1
-                self._fancy_main_graph_draw('intermediate_graph{}'.format(current_cycle_number), True)
+                if save_graphs: 
+                    self._fancy_main_graph_draw('intermediate_graph{}'.format(current_cycle_number), True)
 #                self._main_graph_dump('Graph_' + str(current_cycle_number))
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
                 
@@ -204,7 +207,7 @@ class Model(HasTraits):
         # Get the components and conformations that we are looking for
         # Note that any proteins with a [] conformation will always be last in the list
         rule_components, rule_conformations = rule.generate_component_list(what_to_find)
-        print(rule, what_to_find, rule_components, rule_conformations)
+
         # Iterate through all the graph's states and add them to the lists if they match
         matching_states = []
         for current_state in self.network.main_graph.__iter__():
@@ -1173,7 +1176,9 @@ class Model(HasTraits):
         # Calculate positions
         #pos = nx.spring_layout(G)  # positions for all nodes
         #pos = nx.shell_layout(G)  # positions for all nodes
-        pos = nx.kamada_kawai_layout(G)  # positions for all nodes
+        #pos = nx.kamada_kawai_layout(G)  # positions for all nodes
+        #pos = nx.spectral_layout(G)  # positions for all nodes
+        pos = nx.circular_layout(G)  # positions for all nodes
         if ID_labels:
             node_labels = {node:str(node.ID)[-4:] for node in G}
         else:
