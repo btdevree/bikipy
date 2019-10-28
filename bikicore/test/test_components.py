@@ -178,7 +178,7 @@ def default_CountingSignature_instance():
 def default_two_state_antagonist_model_with_main_graph(default_Model_irreversible_association):
     dmi = default_Model_irreversible_association
     
-    # Have rule A dissociates with R, change to reversible association
+    # Have rule A associates with R, change to reversible association
     dmi.rule_list[0].rule = ' reversibly associates with '
     
     # Add rule for a conformation conversion - "R(0) converts to R(1)"
@@ -1219,6 +1219,27 @@ def test_Network_duplicate_correlates_from_other(default_two_state_antagonist_mo
     assert len(dam.network.derived_graph_correlate_STobjs['testgraph2']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
     
     # Would like more extensive tests here...
+    
+    # Should test if correlate list goes back to main_graph, does not currently
+
+# Test for graph reduction function
+def test_Network_reduce_graph_by_components(default_two_state_antagonist_model_with_main_graph):
+    dam = default_two_state_antagonist_model_with_main_graph
+    
+    # Make a copy
+    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
+    
+    # What is the graph when there is no "A" present
+    test_comp_list = dam.protein_list
+    print(test_comp_list)
+    raise
+    dam.network.reduce_graph_by_components('testgraph', test_comp_list)
+    
+    # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
+    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
+    assert len(dam.network.derived_graph_correlate_states['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
+    assert len(dam.network.derived_graph_correlate_STobjs['testgraph']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
+
 
 # ------Tests for CountingSignature objects------
 
