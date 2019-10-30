@@ -58,7 +58,7 @@ class Model(HasTraits):
         old_network = self.network.main_graph.copy()
         current_cycle_number = 0
         if save_graphs: 
-            self._fancy_main_graph_draw('singleton_start_graph', True)
+            self._fancy_graph_draw('singleton_start_graph', None, True)
         while current_cycle_number <= max_cycles:
             self.apply_rules_to_network()
 #            self._main_graph_dump('Graph_0')
@@ -68,13 +68,13 @@ class Model(HasTraits):
 #                self._main_graph_dump('Final_graph')
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
                 if save_graphs: 
-                    self._fancy_main_graph_draw('last_graph', True)
+                    self._fancy_graph_draw('last_graph', None, True)
                 break
             else:
                 old_network = self.network.main_graph.copy()
                 current_cycle_number += 1
                 if save_graphs: 
-                    self._fancy_main_graph_draw('intermediate_graph{}'.format(current_cycle_number), True)
+                    self._fancy_graph_draw('intermediate_graph{}'.format(current_cycle_number), None, True)
 #                self._main_graph_dump('Graph_' + str(current_cycle_number))
 #                print('Graph size = ', self.network.main_graph.number_of_nodes())
                 
@@ -1167,12 +1167,16 @@ class Model(HasTraits):
         return valid_competing_states
         
     # Graphing
-    def _fancy_main_graph_draw(self, label='default', ID_labels=False):
+    def _fancy_graph_draw(self, label='default', name=None, ID_labels=False):
         plt.cla()
         plt.figure(figsize=(16, 12)) 
-        # Get graph
-        G = self.network.main_graph
         
+        # Get graph - default is main_graph
+        if name == None:
+            G = self.network.main_graph
+        else:
+            G = self.network.derived_graphs[name]
+            
         # Calculate positions
         #pos = nx.spring_layout(G)  # positions for all nodes
         #pos = nx.shell_layout(G)  # positions for all nodes

@@ -1166,6 +1166,7 @@ def test_Network_autoname_node(default_two_state_antagonist_model_with_main_grap
         acceptable_names.remove(teststate.name)
     assert len(acceptable_names) == 0
 
+# NOTE Duplication may not be needed? Using networkx subgraph views instead.
 # Test for duplicaiton function
 def test_Network_duplicate_graph_from_main(default_two_state_antagonist_model_with_main_graph):
     dam = default_two_state_antagonist_model_with_main_graph
@@ -1225,21 +1226,18 @@ def test_Network_duplicate_correlates_from_other(default_two_state_antagonist_mo
 # Test for graph reduction function
 def test_Network_reduce_graph_by_components(default_two_state_antagonist_model_with_main_graph):
     dam = default_two_state_antagonist_model_with_main_graph
-    
-    # Make a copy
-    dam.network.duplicate_graph('testgraph') # Default is to copy from main graph
-    
+   
     # What is the graph when there is no "A" present
     test_comp_list = dam.protein_list
-    print(test_comp_list)
-    raise
+    
+    # Make graph for proteins only
     dam.network.reduce_graph_by_components('testgraph', test_comp_list)
     
     # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
+    with pytest.raises():
+        assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
     assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
-    assert len(dam.network.derived_graph_correlate_states['testgraph']) == len(dam.network.main_graph) # All new nodes should have a correlating node in the main graph
-    assert len(dam.network.derived_graph_correlate_STobjs['testgraph']) == len(dam.network.main_graph.edges.data('reaction_type')) # All new nodes should have a correlating node in the main graph
-
+    
 
 # ------Tests for CountingSignature objects------
 

@@ -140,4 +140,6 @@ m1.rule_list = [r2, r3, r4, r6, r7, r8, r9, r10, r11, r12, r13]
 m1.generate_network(save_graphs=True)
 
 # Print graph
-m1._fancy_main_graph_draw('testgraph')
+m1._fancy_graph_draw('testgraph')
+
+selected_nodes = [node for node in m1.network.main_graph if all([x[1] in m1.protein_list[0:2] for x in node.enumerate_components()])]
