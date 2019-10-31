@@ -1231,13 +1231,12 @@ def test_Network_reduce_graph_by_components(default_two_state_antagonist_model_w
     test_comp_list = dam.protein_list
     
     # Make graph for proteins only
-    dam.network.reduce_graph_by_components('testgraph', test_comp_list)
+    dam.network.reduce_graph_by_components(test_comp_list, 'testgraph')
     
     # Test for a new graph with the given name in the derivitive graph list, and a list of node correlations
-    with pytest.raises():
+    with pytest.raises(AssertionError):
         assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
-    assert nx.algorithms.isomorphism.is_isomorphic(dam.network.main_graph, dam.network.derived_graphs['testgraph'])
-    
+    assert len(dam.network.derived_graphs['testgraph']) == 2
 
 # ------Tests for CountingSignature objects------
 

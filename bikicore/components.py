@@ -831,14 +831,23 @@ class Network(HasTraits):
         self.derived_graph_correlate_states[name] = new_state_correlate_list
         self.derived_graph_correlate_STobjs[name] = new_STobj_correlate_list
     
-    def reduce_graph_by_components(self, source_graph_name, component_list):
+    def reduce_graph_by_components(self, available_component_list, reduced_graph_name, source_graph_name=None):
         # Function to delete nodes and edges in the graph, leaving only those that can be formed with the list of components
         # Parameters:
-            # source_graph_name - string with the name of the graph to be modified.
-            # component_list - list of components that are present for this graph
+            # available_component_list - list of components that are present for making in this subgraph
+            # source_graph_name - string with the name of the graph to be modified. Default = main_graph
             
-        # Do not allow main graph to be reduced this way
-        pass
+        # Select graph
+        if source_graph_name == None:
+            source_graph = self.main_graph
+        else:
+            source_graph = self.derived_graphs[source_graph_name]
+        
+        # Calculate the nodes to keep
+        included_nodes = [node for node in source_graph if all([x[1] in available_component_list for x in node.enumerate_components()])]
+        
+        # Make subgraph
+        self.derived_graphs[reduced_graph_name] = source_graph.subgraph(included_nodes)
     
     def _get_next_edge_number(self, graph = None):
         # Helper function to see what the next availiable number in the graph is
